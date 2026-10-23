@@ -166,6 +166,11 @@ def copy_engine_files(
         + "};\n"
     )
     (generated_dir / "engine_bundle.js").write_text(bundle, encoding="utf-8")
+
+    # Upstream keep CommonJS fallbacks gated on `typeof(process)` (Node only).
+    # They are dead code in a browser, but bundlers resolve every specifier
+    # statically, so companion stub modules are required here for the build.
+    writes_stub_modules(generated_dir, resolve_stub_targets(bundle))
     (generated_dir / "engine_bundle.d.ts").write_text(BUNDLE_D_TS, encoding="utf-8")
     (generated_dir / "README.md").write_text(
         "# Generated engine bundle\n\n"
@@ -173,6 +178,28 @@ def copy_engine_files(
         "Grammalecte source tree. Do not edit by hand.\n",
         encoding="utf-8",
     )
+
+
+def resolve_stub_targets(bundle_source: str) -> list[str]:
+    """Relative `require("./x.js")` specifiers used by the CommonJS branches."""
+    targets: set[str] = set()
+    for specifiers in re.findall(r'require\("([^"]+)"\)', bundle_source):
+        if re.match(r"^\.{1,2}/[\w\-.]+\.js$", specifiers):
+            targets.add(specifiers)
+    return sorted(targets)
+
+
+def writes_stub_modules(generated_dir: pathlib.Path, targets: list[str]) -> None:
+    for specifier in targets:
+        file_name = pathlib.Path(specifier).name
+        stub = (
+            "// Generated stub - DO NOT EDIT.\n"
+            "// The engine carries CommonJS fallback branches (Node-only, dead\n"
+            "// code in a browser). Bundlers still resolve their require() calls\n"
+            "// statically; this stub only satisfies that resolution.\n"
+            "export {};\n"
+        )
+        (generated_dir / file_name).write_text(stub, encoding="utf-8")
 
 
 def copy_data_files(grammalecte_out: pathlib.Path, data_dest: pathlib.Path) -> None:
