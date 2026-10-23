@@ -1,0 +1,29 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.6.2/schema.json",
+  "files": {
+    "includes": [
+      "src/**/!(*_generated*)",
+      "scripts/**",
+      "*.{ts,js,json}",
+      ".github/**",
+      "!src/engine/grammalecte",
+      "!public/grammalecte"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentStyle": "space",
+    "indentWidth": 2,
+    "lineWidth": 110
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "suspicious": {
+        "noExplicitAny": "error",
+        "noUnknownAtRules": "off"
+      }
+    }
+  },
+  "vcs": { "enabled": false }
+}
