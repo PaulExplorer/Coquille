@@ -1,0 +1,74 @@
+/**
+ * Typed message contract between the background, the content scripts, the
+ * popup and the options page. All calls go through lib/messaging.ts helpers,
+ * with a single response envelope.
+ */
+
+export interface SiteStatus {
+  /** Master switch of the extension. */
+  globalEnabled: boolean;
+  /** Effective state for the domain: globalEnabled && !disabled. */
+  effectiveEnabled: boolean;
+  domain: string;
+}
+
+export interface BackgroundSettings {
+  globalEnabled: boolean;
+  disabledSites: string[];
+  debounceMs: number;
+  maxTextLength: number;
+  engineOptions: Record<string, boolean>;
+  ignoredWords: string[];
+  ignoredRules: string[];
+}
+
+export interface LintDto {
+  /** Offsets in the text sent for analysis. */
+  start: number;
+  end: number;
+  kind: 'grammar' | 'spelling';
+  ruleId: string;
+  message: string;
+  url: string | undefined;
+  /** Category color hint from the engine, if any. */
+  color: string | undefined;
+  suggestions: string[];
+  value: string;
+}
+
+export interface LintBatch {
+  lints: LintDto[];
+  /** True when the text exceeded the analysis limit and was checked partially. */
+  truncated: boolean;
+}
+
+export interface TabStatus {
+  lints: number;
+}
+
+export type BackgroundRequest =
+  | { type: 'lintText'; text: string }
+  | { type: 'spellingSuggestions'; word: string }
+  | { type: 'getSiteStatus'; domain: string }
+  | { type: 'setSiteEnabled'; domain: string; enabled: boolean }
+  | { type: 'getSettings' }
+  | { type: 'setSettings'; patch: Partial<BackgroundSettings> }
+  | { type: 'setOption'; option: string; value: boolean }
+  | { type: 'resetOptions' }
+  | { type: 'ignoreWord'; word: string }
+  | { type: 'unignoreWord'; word: string }
+  | { type: 'ignoreRule'; ruleId: string }
+  | { type: 'reportLintCount'; count: number }
+  | { type: 'getTabStatus' }
+  | { type: 'getEngineVersion' };
+
+export interface BackgroundResponse<T> {
+  ok: boolean;
+  value?: T;
+  error?: string;
+}
+
+export interface EngineVersion {
+  engineVersion: string;
+  packagedAt: string;
+}
