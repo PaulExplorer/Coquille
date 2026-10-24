@@ -16,7 +16,7 @@ export interface GrammalecteError {
   sLineId: string;
   sRuleId: string;
   sType: string;
-  aColor: string | undefined;
+  aColor: [number, number, number] | string | undefined;
   sMessage: string;
   aSuggestions: string[];
   URL: string;

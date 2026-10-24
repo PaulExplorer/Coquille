@@ -144,6 +144,7 @@ export async function createGCEngine(resolver: EngineDataResolver): Promise<Gram
         lints.push(...grammarLints(paragraph, normalized, mapper));
         lints.push(...spellingLints(paragraph, normalized, mapper));
       }
+      lints.sort((a, b) => a.start - b.start || a.end - b.end);
       return lints;
     },
 
@@ -186,7 +187,7 @@ function mapGrammarError(
     ruleId: error.sRuleId,
     message: error.sMessage,
     url: error.URL === "" ? undefined : error.URL,
-    color: error.aColor,
+    color: typeof error.aColor === "string" ? error.aColor : undefined,
     suggestions: error.aSuggestions,
     value,
   };

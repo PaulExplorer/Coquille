@@ -32,9 +32,6 @@ const STYLE = `
   background-repeat: repeat-x;
   background-position: bottom left;
 }
-.bg-box.tinted {
-  border-bottom: 2px solid var(--bg-color);
-}
 .bg-badge {
   position: fixed;
   font: 11px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;
@@ -125,13 +122,7 @@ export class OverlayLayer {
 
   private renderBox(box: HitBox): HTMLDivElement {
     const element = document.createElement('div');
-    const color = box.lint.color;
-    if (color !== undefined && color !== '') {
-      element.className = 'bg-box tinted';
-      element.style.setProperty('--bg-color', color);
-    } else {
-      element.className = `bg-box ${box.lint.kind}`;
-    }
+    element.className = `bg-box ${box.lint.kind}`;
     element.style.left = `${Math.round(box.rect.left)}px`;
     element.style.top = `${Math.round(box.rect.top)}px`;
     element.style.width = `${Math.max(Math.round(box.rect.width), 3)}px`;
