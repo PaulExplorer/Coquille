@@ -2,9 +2,10 @@
   "extends": "./.wxt/tsconfig.json",
   "compilerOptions": {
     "strict": true,
+    "jsx": "react-jsx",
     "noUncheckedIndexedAccess": true,
     "noFallthroughCasesInSwitch": true,
     "verbatimModuleSyntax": true
   },
-  "exclude": ["node_modules", ".output", ".wxt", "public"]
+  "exclude": ["node_modules", ".output"]
 }

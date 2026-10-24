@@ -1,0 +1,147 @@
+:root {
+  color-scheme: light;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #1f2933;
+}
+
+.options {
+  max-width: 720px;
+  margin: 24px auto 48px;
+  padding: 0 16px;
+}
+
+.options__head {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.options__head h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.options__version {
+  color: #52606d;
+  font-size: 12px;
+}
+
+.options__tabs {
+  display: flex;
+  gap: 4px;
+  margin: 16px 0 20px;
+  border-bottom: 1px solid #d9e2ec;
+}
+
+.options__tab {
+  border: 0;
+  background: transparent;
+  padding: 8px 12px;
+  font-size: 14px;
+  color: #52606d;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.options__tab--active {
+  color: #1f2933;
+  font-weight: 600;
+  border-bottom-color: #1971c2;
+}
+
+section h2 {
+  font-size: 16px;
+  margin: 0 0 12px;
+}
+
+.row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 8px 0;
+  border-bottom: 1px solid #edf2f7;
+}
+
+.row--group {
+  font-weight: 600;
+  background: #edf2f7;
+  padding: 8px;
+  border-radius: 6px;
+  border: 0;
+}
+
+.row__label {
+  display: flex;
+  flex-direction: column;
+  font-size: 14px;
+}
+
+.row__hint {
+  color: #64748b;
+  font-weight: 400;
+  font-size: 12px;
+  max-width: 460px;
+}
+
+.add {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.add input {
+  flex: 1;
+  padding: 7px 10px;
+  border: 1px solid #cbd2d9;
+  border-radius: 6px;
+}
+
+.add button,
+.small {
+  padding: 6px 10px;
+  font-size: 12px;
+  border: 1px solid #cbd2d9;
+  background: #fff;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+.list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 6px 0;
+  border-bottom: 1px solid #edf2f7;
+  font-size: 13px;
+}
+
+.empty {
+  color: #64748b;
+  font-size: 13px;
+}
+
+.hint {
+  color: #64748b;
+  font-size: 12px;
+}
+
+section p {
+  font-size: 14px;
+}
+
+section ul {
+  font-size: 14px;
+}

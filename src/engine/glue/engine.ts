@@ -19,10 +19,11 @@ import type {
   GrammalecteTextNamespace,
 } from "./bundle-contract";
 
-const BUNDLE = bundleJs as unknown as EngineBundleExports;
+/** Internal export names of the generated bundle, typed in bundle-contract. */
+export const BUNDLE = bundleJs as unknown as EngineBundleExports;
 
 /** Path prefix of the runtime data copied by scripts/update_engine.py. */
-export const DATA_ROOT = "grammalecte/";
+const DATA_ROOT = "grammalecte/";
 const MAIN_DICTIONARY_URL = `${DATA_ROOT}graphspell/_dictionaries/fr-allvars.json`;
 const MAIN_DICTIONARY_DIR = `${DATA_ROOT}graphspell/_dictionaries`;
 const MAX_PARAGRAPHS = 500;
@@ -61,7 +62,7 @@ export interface GrammalecteEngine {
   lintText(text: string): Promise<RawLint[]>;
   /** Suggestions for an unknown word, priority on the last (personal) hit. */
   spellingSuggestions(word: string): Promise<string[]>;
-  getOptions(): EngineOptionsObject;
+  getOptions(): Record<string, boolean>;
   setOption(name: string, value: boolean): void;
   resetOptions(): void;
 }
@@ -152,7 +153,9 @@ export async function createGCEngine(resolver: EngineDataResolver): Promise<Gram
       return groups.flat().slice(0, MAX_SPELL_SUGGESTIONS);
     },
 
-    getOptions: () => BUNDLE.helpers.mapToObject(BUNDLE.gc_engine.getOptions()),
+    // Engine options are plain boolean toggles.
+    getOptions: (): Record<string, boolean> =>
+      BUNDLE.helpers.mapToObject(BUNDLE.gc_engine.getOptions()) as Record<string, boolean>,
 
     setOption(name, value) {
       BUNDLE.gc_engine.setOption(name, value);

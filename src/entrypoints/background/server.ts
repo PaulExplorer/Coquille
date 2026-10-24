@@ -1,10 +1,15 @@
 import { browser } from 'wxt/browser';
 import type { GrammalecteEngine, RawLint } from '../../engine/glue/engine';
 import { applyEngineOptions } from './engine-host';
-import { isSubdomainOf, normalizeDomain } from '../../lib/sites';
+import {
+  isSubdomainOf,
+  normalizeDomain,
+} from '../../lib/sites';
 import type {
   BackgroundRequest,
   BackgroundSettings,
+  EngineOptionInfo,
+  EngineOptionsPayload,
   EngineVersion,
   LintBatch,
   LintDto,
@@ -13,6 +18,7 @@ import type {
 } from '../../lib/messages';
 import { serveBackgroundRequests } from '../../lib/messaging';
 import { loadEngineVersion, loadSettings, saveSettings } from '../../lib/storage';
+import { optionCatalog } from './option-catalog';
 
 export interface EngineHostLike {
   get(): Promise<GrammalecteEngine>;
@@ -143,8 +149,17 @@ export function serveRequests(engineHost: EngineHostLike): (tabId: number) => vo
       }
 
       case 'getTabStatus': {
-        const count = sender.tabId != null ? (lintCounts.get(sender.tabId) ?? 0) : 0;
+        const lookup = request.tabId ?? sender.tabId;
+        const count = lookup != null ? (lintCounts.get(lookup) ?? 0) : 0;
         return { lints: count } satisfies TabStatus;
+      }
+
+      case 'getOptions': {
+        const engine = await engineHost.get();
+        return {
+          options: engine.getOptions(),
+          infos: optionCatalog(),
+        } satisfies EngineOptionsPayload;
       }
 
       case 'getEngineVersion':

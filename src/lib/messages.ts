@@ -53,19 +53,34 @@ export type BackgroundRequest =
   | { type: 'setSiteEnabled'; domain: string; enabled: boolean }
   | { type: 'getSettings' }
   | { type: 'setSettings'; patch: Partial<BackgroundSettings> }
+  | { type: 'getOptions' }
   | { type: 'setOption'; option: string; value: boolean }
   | { type: 'resetOptions' }
   | { type: 'ignoreWord'; word: string }
   | { type: 'unignoreWord'; word: string }
   | { type: 'ignoreRule'; ruleId: string }
   | { type: 'reportLintCount'; count: number }
-  | { type: 'getTabStatus' }
+  | { type: 'getTabStatus'; tabId?: number }
   | { type: 'getEngineVersion' };
 
 export interface BackgroundResponse<T> {
   ok: boolean;
   value?: T;
   error?: string;
+}
+
+/** Option catalog built from the engine's own getOptionLabels. */
+export interface EngineOptionInfo {
+  name: string;
+  label: string;
+  description: string;
+  /** True for category toggles (basic, gramm, verbs, style, misc…). */
+  isCategory: boolean;
+}
+
+export interface EngineOptionsPayload {
+  options: Record<string, boolean>;
+  infos: EngineOptionInfo[];
 }
 
 export interface EngineVersion {
