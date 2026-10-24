@@ -18,16 +18,19 @@ jobs:
       - run: npm run lint
       - run: npm test
       - run: npm run smoke:engine
-      - run: npm run build:firefox
       - run: npm run zip:firefox
-      - run: npm run build
+      - run: npm run zip
       - uses: actions/upload-artifact@v4
         with:
           name: firefox-zip
-          path: .output/*.zip
+          path: |
+            .output/*firefox*.zip
+            .output/*sources*.zip
+          include-hidden-files: true
           if-no-files-found: error
       - uses: actions/upload-artifact@v4
         with:
           name: chrome-zip
-          path: .output/chrome-mv3.zip
-          if-no-files-found: ignore
+          path: .output/*chrome*.zip
+          include-hidden-files: true
+          if-no-files-found: error
