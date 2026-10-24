@@ -13,10 +13,11 @@
     "build:firefox": "wxt build -b firefox",
     "zip": "wxt zip",
     "zip:firefox": "wxt zip -b firefox",
-    "compile": "tsc --noEmit",
+    "postinstall": "wxt prepare",
+    "compile": "wxt prepare && tsc --noEmit",
     "test": "vitest run",
     "smoke:engine": "node scripts/smoke_engine.mjs",
-    "lint": "npm run compile && wxt prepare && biome check .",
+    "lint": "wxt prepare && npm run compile && biome check .",
     "update-engine": "python3 scripts/update_engine.py"
   },
   "dependencies": {
