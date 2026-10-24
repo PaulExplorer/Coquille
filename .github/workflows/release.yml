@@ -22,6 +22,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - run: npm run smoke:engine
       - name: Build Firefox package (web-ext, AMO-ready)
         run: npm run zip:firefox
       - name: Build Chrome package

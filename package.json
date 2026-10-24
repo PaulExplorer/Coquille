@@ -15,6 +15,7 @@
     "zip:firefox": "wxt zip -b firefox",
     "compile": "tsc --noEmit",
     "test": "vitest run",
+    "smoke:engine": "node scripts/smoke_engine.mjs",
     "lint": "npm run compile && wxt prepare && biome check .",
     "update-engine": "python3 scripts/update_engine.py"
   },

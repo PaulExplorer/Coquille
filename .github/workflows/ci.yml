@@ -17,6 +17,7 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - run: npm run smoke:engine
       - run: npm run build:firefox
       - run: npm run zip:firefox
       - run: npm run build
