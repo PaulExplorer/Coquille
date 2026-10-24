@@ -39,12 +39,15 @@ const STYLE = `
 
 export class OverlayLayer {
   readonly shadow: ShadowRoot;
+  /** Retargeted event.target for any pointer event inside the shadow layer. */
+  readonly host: HTMLElement;
   private boxLayer: HTMLDivElement;
   private currentBoxes: HitBox[];
 
   constructor() {
     const host = document.createElement('div');
     host.id = OVERLAY_ID;
+    this.host = host;
     this.shadow = host.attachShadow({ mode: 'closed' });
     const style = document.createElement('style');
     style.textContent = STYLE;

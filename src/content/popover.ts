@@ -113,7 +113,15 @@ export class PopoverLayer {
   constructor(
     private mount: ShadowRoot,
     private actions: PopoverActions,
-  ) {}
+  ) {
+    // The popover styles live in the overlay's shadow root; inject them once.
+    if (mount.querySelector('style[data-bg="popover"]') === null) {
+      const style = document.createElement('style');
+      style.dataset.bg = 'popover';
+      style.textContent = POPOVER_CSS;
+      mount.append(style);
+    }
+  }
 
   get isOpen(): boolean {
     return this.root !== undefined;
@@ -129,13 +137,6 @@ export class PopoverLayer {
     this.currentLint = undefined;
     if (this.panelOpen) this.actions.onClose();
     this.panelOpen = false;
-  }
-
-  contains(target: EventTarget | null): boolean {
-    return (
-      target instanceof Node &&
-      (this.root?.contains(target) ?? false)
-    );
   }
 
   /** Show the inline popover for one lint, anchored under/over its box. */

@@ -247,7 +247,10 @@ export class ContentSession {
   /* ------------------------------ Keys/pointers -------------------------- */
 
   private handlePointerDown(event: PointerEvent): void {
-    if (this.popover.isOpen && !this.popover.contains(event.target)) {
+    // Events from inside the closed shadow root reach this document listener
+    // retargeted to the overlay host; anything else is a genuine outside
+    // click and dismisses the popover before its rows can react to it.
+    if (this.popover.isOpen && event.target !== this.overlay.host) {
       this.popover.close();
     }
     if (this.adapter === undefined || !this.siteEnabled) return;
