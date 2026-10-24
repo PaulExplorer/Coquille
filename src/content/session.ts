@@ -36,6 +36,7 @@ export class ContentSession {
   private composing = false;
   private siteEnabled = true;
   private stopped = false;
+  private badgeTimer: number | undefined;
   private readonly cleanups: Array<() => void> = [];
 
   constructor() {
@@ -156,11 +157,14 @@ export class ContentSession {
     if (text.trim() === '') {
       this.lints = [];
       this.renderBoxes();
+      this.overlay.hideBadge();
       void callBackground({ type: 'reportLintCount', count: 0 }).catch(() => {});
       return;
     }
 
     const token = (this.lintToken += 1);
+    this.overlay.setBadgeAnchor(adapter.host.getBoundingClientRect());
+    this.overlay.showBadge('Analyse…');
     try {
       const batch = await callBackground<{ lints: LintDto[]; truncated: boolean }>({
         type: 'lintText',
@@ -175,9 +179,40 @@ export class ContentSession {
       }
       this.lints = batch.lints;
       this.renderBoxes();
+      this.announceCount(batch.lints.length);
+      this.refreshPanelIfOpen();
       void callBackground({ type: 'reportLintCount', count: batch.lints.length }).catch(() => {});
     } catch (error) {
       console.debug('Better Grammalecte: lint request failed', error);
+      this.overlay.hideBadge();
+    }
+  }
+
+  /** Brief status pill: count of the last completed analysis. */
+  private announceCount(count: number): void {
+    window.clearTimeout(this.badgeTimer);
+    if (count === 0) {
+      this.overlay.hideBadge();
+      return;
+    }
+    this.overlay.showBadge(`${count} remarque${count > 1 ? 's' : ''}`);
+    this.badgeTimer = window.setTimeout(() => this.overlay.hideBadge(), 1800);
+  }
+
+  /** Keep the review panel in sync while it is open. */
+  private refreshPanelIfOpen(): void {
+    if (!this.popover.isPanelOpen || this.adapter === undefined) return;
+    this.popover.openPanel(this.lints, this.fieldLabel());
+  }
+
+  private fieldLabel(): string {
+    switch (this.adapter?.type) {
+      case 'input':
+        return 'un champ texte';
+      case 'textarea':
+        return 'une zone de texte';
+      default:
+        return 'le texte en cours';
     }
   }
 
@@ -194,12 +229,15 @@ export class ContentSession {
       const rects = adapter.rects(lint.start, lint.end);
       for (const rect of rects.slice(0, MAX_RECTS_PER_LINT)) {
         boxes.push({
+          // Thin underline strip for rendering; the full line box is kept for
+          // pointer hit-testing (Harper hit-tests the whole box).
           rect: new DOMRect(
             Math.round(rect.left),
             Math.round(Math.max(rect.bottom - 6, rect.top)),
             Math.round(rect.width),
             6,
           ),
+          hitRect: rect,
           lint,
         });
       }
@@ -235,13 +273,12 @@ export class ContentSession {
   /** Open the compact review panel for the active field (popup entry point). */
   openReviewPanel(): void {
     if (this.adapter === undefined) return;
-    const label =
-      this.adapter.type === 'input'
-        ? 'un champ texte'
-        : this.adapter.type === 'textarea'
-          ? 'une zone de texte'
-          : 'le texte en cours';
-    this.popover.openPanel(this.lints, label);
+    this.popover.openPanel(this.lints, this.fieldLabel());
+  }
+
+  /** Attach the already-focused field, for pages loaded with focus inside. */
+  attachActiveField(): void {
+    void this.attachField(document.activeElement);
   }
 
   /* ------------------------------ Keys/pointers -------------------------- */
@@ -253,7 +290,11 @@ export class ContentSession {
     if (this.popover.isOpen && event.target !== this.overlay.host) {
       this.popover.close();
     }
-    if (this.adapter === undefined || !this.siteEnabled) return;
+    const adapter = this.adapter;
+    if (adapter === undefined || !this.siteEnabled) return;
+    // Only react to presses that actually landed on the field (Harper checks
+    // the composed path contains the source element).
+    if (!event.composedPath().includes(adapter.host)) return;
     const hit = this.overlay.hitAt(event);
     if (hit !== undefined) {
       this.popover.open(hit, hit.lint.suggestions);
@@ -272,6 +313,7 @@ export class ContentSession {
     this.stopped = true;
     window.clearTimeout(this.debounceTimer);
     window.clearTimeout(this.blurTimer);
+    window.clearTimeout(this.badgeTimer);
     for (const cleanup of this.cleanups) cleanup();
     this.cleanups.length = 0;
     this.popover.close();

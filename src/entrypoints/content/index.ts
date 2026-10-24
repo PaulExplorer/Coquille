@@ -13,6 +13,7 @@ export default defineContentScript({
   runAt: 'document_idle',
   main(ctx) {
     const session = new ContentSession();
+    session.attachActiveField();
 
     // Popup entry point: open the fallback review panel for this page.
     const onMessage = (

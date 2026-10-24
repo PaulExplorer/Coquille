@@ -141,70 +141,135 @@ export class ContentEditableAdapter implements FieldAdapter {
 
 /**
  * Viewport rects for a slice of a form field's value, measured through a
- * hidden mirror element styled like the field (mirroring technique, also
- * used by Harper's TextFieldRange and textchecker's mirror divs).
+ * hidden mirror element styled like the field.
+ *
+ * Mirrors Harper's TextFieldRange: one persistent mirror per field (weakly
+ * held "arena"), every text-affecting longhand copied (font longhands and
+ * border widths, not the `font` shorthand — Firefox computes it empty),
+ * textarea scroll synchronized, mirror laid out at the field's own size.
  */
+interface MirrorArena {
+  mirror: HTMLDivElement;
+  before: HTMLSpanElement;
+  marked: HTMLSpanElement;
+  after: HTMLSpanElement;
+  field: HTMLTextAreaElement | HTMLInputElement;
+}
+
+/** Text-affecting longhands worth copying (Harper's list). */
+const MIRROR_STYLE_PROPERTIES = [
+  'fontFamily',
+  'fontSize',
+  'fontWeight',
+  'fontStyle',
+  'fontStretch',
+  'letterSpacing',
+  'wordSpacing',
+  'lineHeight',
+  'textTransform',
+  'textIndent',
+  'direction',
+  'paddingTop',
+  'paddingRight',
+  'paddingBottom',
+  'paddingLeft',
+  'borderTopWidth',
+  'borderRightWidth',
+  'borderBottomWidth',
+  'borderLeftWidth',
+] as const;
+
+const mirrorArenas = new WeakMap<HTMLTextAreaElement | HTMLInputElement, MirrorArena>();
+
+function ensureMirrorArena(
+  field: HTMLTextAreaElement | HTMLInputElement,
+): MirrorArena {
+  const existing = mirrorArenas.get(field);
+  if (existing !== undefined && existing.mirror.isConnected) return existing;
+  if (existing !== undefined) {
+    existing.mirror.remove();
+    mirrorArenas.delete(field);
+  }
+
+  const mirror = document.createElement('div');
+  mirror.setAttribute('aria-hidden', 'true');
+  const styles = window.getComputedStyle(field);
+  for (const property of MIRROR_STYLE_PROPERTIES) {
+    mirror.style.setProperty(property, styles.getPropertyValue(property));
+  }
+  // A copied border-width only takes layout space with a visible border style;
+  // draw it transparent so the mirror's border-box matches the field's.
+  Object.assign(mirror.style, {
+    boxSizing: styles.boxSizing,
+    borderTopStyle: 'solid',
+    borderRightStyle: 'solid',
+    borderBottomStyle: 'solid',
+    borderLeftStyle: 'solid',
+    borderTopColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'transparent',
+    borderLeftColor: 'transparent',
+    whiteSpace: field instanceof HTMLTextAreaElement ? 'pre-wrap' : 'pre',
+    wordWrap: 'break-word',
+    overflowX: 'auto',
+    overflowY: 'auto',
+    visibility: 'hidden',
+    position: 'absolute',
+    pointerEvents: 'none',
+    margin: '0',
+  });
+
+  const before = document.createElement('span');
+  const marked = document.createElement('span');
+  const after = document.createElement('span');
+  mirror.append(before, marked, after);
+  document.body.append(mirror);
+
+  const arena: MirrorArena = { mirror, before, marked, after, field };
+  mirrorArenas.set(field, arena);
+  return arena;
+}
+
+/** Re-position and re-flow the mirror for the requested slice. */
+function syncMirror(arena: MirrorArena, value: string, start: number, end: number): void {
+  arena.before.textContent = value.slice(0, start);
+  arena.marked.textContent = value.slice(start, end);
+  arena.after.textContent = value.slice(end);
+  arena.mirror.scrollTop = arena.field.scrollTop;
+  arena.mirror.scrollLeft = arena.field.scrollLeft;
+
+  const styles = window.getComputedStyle(arena.field);
+  const fieldBox = arena.field.getBoundingClientRect();
+  const toPx = (value: string): number => Number.parseFloat(value) || 0;
+  // For content-box fields the CSS width excludes padding and borders, which
+  // are part of the on-screen box; restore the layout width the field shows.
+  let width = fieldBox.width;
+  if (styles.boxSizing !== 'border-box') {
+    width =
+      fieldBox.width -
+      toPx(styles.paddingLeft) - toPx(styles.paddingRight) -
+      toPx(styles.borderLeftWidth) - toPx(styles.borderRightWidth);
+  }
+  arena.mirror.style.top = `${fieldBox.top + window.scrollY}px`;
+  arena.mirror.style.left = `${fieldBox.left + window.scrollX}px`;
+  arena.mirror.style.width = `${width}px`;
+}
+
 function mirrorRects(
   field: HTMLTextAreaElement | HTMLInputElement,
   start: number,
   end: number,
 ): DOMRect[] {
   if (start < 0 || start >= end || end > field.value.length) return [];
-
-  const mirror = document.createElement('div');
-  mirror.setAttribute('aria-hidden', 'true');
-  const before = document.createElement('span');
-  before.textContent = field.value.slice(0, start);
-  const marked = document.createElement('span');
-  marked.textContent = field.value.slice(start, end);
-  const after = document.createElement('span');
-  after.textContent = field.value.slice(end);
-  mirror.append(before, marked, after);
+  const arena = ensureMirrorArena(field);
+  syncMirror(arena, field.value, start, end);
 
   const fieldBox = field.getBoundingClientRect();
-  const styles = window.getComputedStyle(field);
-  const isMultiline = field instanceof HTMLTextAreaElement;
-  mirror.style.position = 'absolute';
-  mirror.style.visibility = 'hidden';
-  mirror.style.whiteSpace = isMultiline ? 'pre-wrap' : 'pre';
-  mirror.style.overflowWrap = isMultiline ? styles.overflowWrap : 'normal';
-  mirror.style.margin = '0';
-  mirror.style.border = 'none';
-  mirror.style.boxSizing = styles.boxSizing;
-  mirror.style.paddingTop = styles.paddingTop;
-  mirror.style.paddingRight = isMultiline ? styles.paddingRight : '0px';
-  mirror.style.paddingBottom = styles.paddingBottom;
-  mirror.style.paddingLeft = isMultiline ? styles.paddingLeft : '0px';
-  mirror.style.font = styles.font;
-  mirror.style.fontFamily = styles.fontFamily;
-  mirror.style.fontSize = styles.fontSize;
-  mirror.style.fontWeight = styles.fontWeight;
-  mirror.style.letterSpacing = styles.letterSpacing;
-  mirror.style.lineHeight = styles.lineHeight;
-  mirror.style.textTransform = styles.textTransform;
-  mirror.style.width = isMultiline
-    ? `${fieldBox.width - paddingOf(styles) * 2}px`
-    : 'max-content';
-  mirror.style.left = fieldBox.left + 'px';
-  mirror.style.top = fieldBox.top + 'px';
-
-  document.body.appendChild(mirror);
-  try {
-    // The spans give viewport coordinates directly (same document, above the
-    // page), so only clipping to the field box remains.
-    const rects: DOMRect[] = [];
-    for (const rect of marked.getClientRects()) {
-      if (intersects(rect, fieldBox)) rects.push(rect);
-    }
-    return rects;
-  } finally {
-    mirror.remove();
+  const rects: DOMRect[] = [];
+  for (const rect of arena.marked.getClientRects()) {
+    if (intersects(rect, fieldBox)) rects.push(rect);
   }
-}
-
-function paddingOf(styles: CSSStyleDeclaration): number {
-  const left = Number.parseFloat(styles.paddingLeft) || 0;
-  return left;
+  return rects;
 }
 
 function intersects(a: DOMRect, b: DOMRect): boolean {

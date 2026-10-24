@@ -75,24 +75,48 @@ const POPOVER_CSS = `
   color: #52606d;
 }
 .bg-panel__item {
-  padding: 6px 12px;
+  display: block;
+  padding: 8px 12px;
+  border-bottom: 1px solid #edf2f7;
+}
+.bg-panel__item:last-of-type {
+  border-bottom: 0;
 }
 .bg-panel__value {
   display: block;
   font-weight: 600;
 }
+.bg-panel__note {
+  display: block;
+  margin-top: 1px;
+  color: #52606d;
+  font-size: 12px;
+}
 .bg-panel__apply {
-  margin-top: 2px;
+  display: inline-block;
+  margin-top: 5px;
   font: inherit;
   font-size: 12px;
   border: 1px solid #cbd2d9;
   background: #fff;
+  color: #1f2933;
   border-radius: 6px;
-  padding: 2px 8px;
+  padding: 3px 10px;
   cursor: pointer;
+  white-space: nowrap;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.bg-panel__apply:hover:not(:disabled) {
+  background: #f0f4f8;
+}
+.bg-panel__apply:disabled {
+  opacity: 0.55;
+  cursor: default;
 }
 .bg-panel__close {
-  margin-top: 8px;
+  margin: 8px 12px 10px;
 }
 `;
 
@@ -250,18 +274,24 @@ export class PopoverLayer {
   /* ------------------------------- Panel ------------------------------- */
 
   openPanel(lints: LintDto[], fieldLabel: string): void {
-    if (lints.length === 0) {
-      this.close();
-      return;
-    }
     this.closeInternal();
     const card = document.createElement('div');
     card.className = 'bg-popover bg-popover--panel';
 
     const intro = document.createElement('span');
     intro.className = 'bg-popover__strength';
-    intro.textContent = `${lints.length} remarque${lints.length > 1 ? 's' : ''} — ${fieldLabel}`;
+    intro.textContent =
+      lints.length === 0
+        ? `Aucune remarque — ${fieldLabel}`
+        : `${lints.length} remarque${lints.length > 1 ? 's' : ''} — ${fieldLabel}`;
     card.append(intro);
+
+    if (lints.length === 0) {
+      const none = document.createElement('span');
+      none.className = 'bg-popover__none';
+      none.textContent = 'Le texte est correct.';
+      card.append(none);
+    }
 
     for (const lint of lints.slice(0, 80)) {
       const group = document.createElement('div');
@@ -272,35 +302,43 @@ export class PopoverLayer {
       group.append(value);
       if (lint.message !== '') {
         const note = document.createElement('span');
+        note.className = 'bg-panel__note';
         note.textContent = lint.message;
-        note.style.color = '#52606d';
-        note.style.fontSize = '12px';
         group.append(note);
       }
-      const apply = document.createElement('button');
-      apply.type = 'button';
-      apply.className = 'bg-panel__apply';
-      apply.textContent = 'Remplacer';
-      group.append(apply);
-      if (lint.suggestions.length > 0) {
-        apply.textContent = `Remplacer par : ${String(lint.suggestions[0])}`;
+      const firstSuggestion = lint.suggestions[0];
+      if (firstSuggestion !== undefined) {
+        const apply = document.createElement('button');
+        apply.type = 'button';
+        apply.className = 'bg-panel__apply';
+        apply.textContent = `Remplacer par : ${String(firstSuggestion)}`;
         apply.addEventListener('click', () => {
-          this.actions.apply(lint, String(lint.suggestions[0]));
+          this.actions.apply(lint, String(firstSuggestion));
         });
+        group.append(apply);
       } else if (lint.kind === 'spelling') {
+        const apply = document.createElement('button');
+        apply.type = 'button';
+        apply.className = 'bg-panel__apply';
         apply.disabled = true;
+        apply.textContent = 'Recherche…';
         void this.actions
           .loadSuggestions?.(lint)
           .then(options => {
-            if (options.length > 0) {
-              apply.disabled = false;
-              apply.textContent = `Remplacer par : ${String(options[0])}`;
-              apply.addEventListener('click', () => {
-                this.actions.apply(lint, String(options[0]));
-              });
+            if (options.length === 0) {
+              apply.textContent = 'Aucune suggestion';
+              return;
             }
+            apply.disabled = false;
+            apply.textContent = `Remplacer par : ${String(options[0])}`;
+            apply.addEventListener('click', () => {
+              this.actions.apply(lint, String(options[0]));
+            });
           })
-          .catch(() => {});
+          .catch(() => {
+            apply.textContent = 'Suggestions indisponibles';
+          });
+        group.append(apply);
       }
       card.append(group);
     }
