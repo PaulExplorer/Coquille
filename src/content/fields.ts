@@ -156,7 +156,9 @@ interface MirrorArena {
   field: HTMLTextAreaElement | HTMLInputElement;
 }
 
-/** Text-affecting longhands worth copying (Harper's list). */
+/** Text-affecting longhands worth copying (Harper's list), as IDL names —
+ * Firefox returns "" for camelCase names passed to getPropertyValue, so the
+ * copy MUST go through the IDL accessors. */
 const MIRROR_STYLE_PROPERTIES = [
   'fontFamily',
   'fontSize',
@@ -194,9 +196,12 @@ function ensureMirrorArena(
   const mirror = document.createElement('div');
   mirror.setAttribute('aria-hidden', 'true');
   const styles = window.getComputedStyle(field);
+  const stylesByIdl = styles as unknown as Record<string, unknown>;
+  const mirrorStyle = mirror.style as unknown as Record<string, unknown>;
   for (const property of MIRROR_STYLE_PROPERTIES) {
-    mirror.style.setProperty(property, styles.getPropertyValue(property));
+    mirrorStyle[property] = stylesByIdl[property] ?? '';
   }
+  mirrorStyle.boxSizing = styles.boxSizing;
   // A copied border-width only takes layout space with a visible border style;
   // draw it transparent so the mirror's border-box matches the field's.
   Object.assign(mirror.style, {
