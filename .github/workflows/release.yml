@@ -1,0 +1,45 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      AMO_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+      AMO_API_SECRET: ${{ secrets.AMO_SSO_JWT }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run lint
+      - run: npm test
+      - name: Build Firefox package (web-ext, AMO-ready)
+        run: npm run zip:firefox
+      - name: Build Chrome package
+        run: npx wxt zip -b chrome
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            .output/*.zip
+          generate_release_notes: true
+      - name: Sign and submit to AMO
+        # Optional: only runs when AMO credentials are configured in the
+        # repository secrets (AMO_JWT_ISSUER + AMO_SSO_JWT).
+        if: env.AMO_API_KEY != '' && env.AMO_API_SECRET != ''
+        run: |
+          npx web-ext sign \
+            --source-dir .output/firefox-mv3 \
+            --api-key "$AMO_API_KEY" \
+            --api-secret "$AMO_API_SECRET" \
+            --channel listed \
+            || echo "AMO submission failed; the zip stays on the release"
