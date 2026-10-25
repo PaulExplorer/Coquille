@@ -29,6 +29,9 @@ export class ContentSession {
   private readonly popover: PopoverLayer;
   private adapter: FieldAdapter | undefined;
   private lints: LintDto[] = [];
+  /** The exact text this.lints was computed against; offsets are only
+   * trusted while the live field content still matches it exactly. */
+  private analyzedText: string | undefined;
   private settings: BackgroundSettings | undefined;
   private lintToken = 0;
   private debounceTimer: number | undefined;
@@ -97,6 +100,7 @@ export class ContentSession {
 
     this.adapter = adapter;
     this.lints = [];
+    this.analyzedText = undefined;
     this.popover.close();
     const enabled = await this.evaluateSiteStatus();
     if (!enabled || this.adapter?.host !== adapter.host) return;
@@ -119,6 +123,7 @@ export class ContentSession {
   private detachField(): void {
     this.adapter = undefined;
     this.lints = [];
+    this.analyzedText = undefined;
     this.popover.close();
     this.overlay.clearBoxes();
     this.lintToken += 1;
@@ -156,6 +161,7 @@ export class ContentSession {
     const text = adapter.text();
     if (text.trim() === '') {
       this.lints = [];
+      this.analyzedText = text;
       this.renderBoxes();
       this.overlay.hideBadge();
       void callBackground({ type: 'reportLintCount', count: 0 }).catch(() => {});
@@ -178,6 +184,7 @@ export class ContentSession {
         return;
       }
       this.lints = batch.lints;
+      this.analyzedText = text;
       this.renderBoxes();
       this.announceCount(batch.lints.length);
       this.refreshPanelIfOpen();
@@ -250,11 +257,22 @@ export class ContentSession {
   private applyReplacement(lint: LintDto, replacement: string): void {
     const adapter = this.adapter;
     if (adapter === undefined) return;
+    if (!this.snapshotIsCurrent()) {
+      // The field changed since the analysis (typing, framework rewrite):
+      // writing at the lints' offsets could hit the wrong words, so refuse
+      // and let the fresh analysis re-anchor everything.
+      this.popover.close();
+      this.overlay.setBadgeAnchor(adapter.host.getBoundingClientRect());
+      this.overlay.showBadge('Recalcul…');
+      this.scheduleLint();
+      return;
+    }
     // Grammalecte-style optimistic update: its panel re-analyzes only the
     // edited paragraph and keeps the other paragraphs' results on screen in
     // the meantime. Mirror that here — drop the applied lint, shift the ones
     // after it by the replacement length delta, and leave everything else
-    // clickable while the debounced re-analysis runs.
+    // clickable while the debounced re-analysis runs. The tracked snapshot
+    // moves along, so successive applies stay offset-safe.
     const delta = replacement.length - (lint.end - lint.start);
     this.lints = this.lints.flatMap(other => {
       if (other.end > lint.start && other.start < lint.end) return []; // overlapping
@@ -263,6 +281,8 @@ export class ContentSession {
       }
       return [other];
     });
+    const snapshot = this.analyzedText as string;
+    this.analyzedText = snapshot.slice(0, lint.start) + replacement + snapshot.slice(lint.end);
     this.renderBoxes();
     // Firefox blurs the field when the pointer presses the non-focusable
     // popover; refocusing (before the write, so the caret lands visibly on
@@ -272,6 +292,12 @@ export class ContentSession {
     adapter.replace(lint, replacement);
     // The input event dispatched by replace() lands in our own listener,
     // which schedules the next (authoritative) lint.
+  }
+
+  /** The lints' offsets are only trustworthy while the field still holds the
+   * exact text they were computed against. */
+  private snapshotIsCurrent(): boolean {
+    return this.adapter !== undefined && this.analyzedText === this.adapter.text();
   }
 
   private ignoreLint(lint: LintDto): void {
@@ -324,6 +350,13 @@ export class ContentSession {
     // Only react to presses that actually landed on the field (Harper checks
     // the composed path contains the source element).
     if (!event.composedPath().includes(adapter.host)) return;
+    // Stale offsets: the underlines describe text that no longer matches the
+    // field, so a hit could open the popover on the wrong word. Recompute
+    // instead (same as the apply-time guard, without risking broken text).
+    if (!this.snapshotIsCurrent()) {
+      this.scheduleLint();
+      return;
+    }
     const hit = this.overlay.hitAt(event);
     if (hit !== undefined) {
       this.popover.open(hit, hit.lint.suggestions);
