@@ -264,6 +264,11 @@ export class ContentSession {
       return [other];
     });
     this.renderBoxes();
+    // Firefox blurs the field when the pointer presses the non-focusable
+    // popover; refocusing (before the write, so the caret lands visibly on
+    // the inserted text) keeps the blur-timer detach, which would clear the
+    // overlays, from ever triggering during an apply.
+    this.focusField();
     adapter.replace(lint, replacement);
     // The input event dispatched by replace() lands in our own listener,
     // which schedules the next (authoritative) lint.
@@ -278,9 +283,16 @@ export class ContentSession {
       .then(() => {
         this.lints = this.lints.filter(other => other.start !== lint.start || other.end !== lint.end);
         this.renderBoxes();
+        this.focusField();
         this.scheduleLint();
       })
       .catch(() => {});
+  }
+
+  /** Keep working where the user is: focus the active field, no scrolling. */
+  private focusField(): void {
+    const host = this.adapter?.host;
+    if (host instanceof HTMLElement) host.focus({ preventScroll: true });
   }
 
   /** Open the compact review panel for the active field (popup entry point). */
@@ -303,6 +315,10 @@ export class ContentSession {
     if (this.popover.isOpen && event.target !== this.overlay.host) {
       this.popover.close();
     }
+    // Any press inside our own UI keeps the field focused: Firefox blurs the
+    // field when the pointer presses a non-focusable element (popover, panel),
+    // and a stray blur would detach the field and clear the overlays.
+    if (event.target === this.overlay.host) this.focusField();
     const adapter = this.adapter;
     if (adapter === undefined || !this.siteEnabled) return;
     // Only react to presses that actually landed on the field (Harper checks
