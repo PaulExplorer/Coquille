@@ -3,6 +3,9 @@
 Firefox and Chrome extension providing in-place French spelling and grammar
 checking, powered by the [Grammalecte](https://grammalecte.net/) engine.
 
+- Repository: <https://github.com/PaulExplorer/BetterGrammalecte>
+- Bug reports and suggestions: the repo's GitHub Issues
+
 The original Grammalecte web extension analyses the page text inside a side
 panel and writes corrections back paragraph by paragraph. This project keeps
 the upstream engine (rules, spell checker, dictionaries) untouched and
@@ -74,9 +77,12 @@ GitHub Actions build both targets on every push and attach the Firefox zip
 
 ## Limitations
 
-- French only (the engine upstream is French-only).
+- French only, by design: the interface and the engine are French-only and
+  the extension will stay that way.
 - Rich editors are covered through the contenteditable path; exotic editors
   (Google Docs canvas) are not supported.
+- Fields inside cross-origin iframes are not reached (the content script
+  only injects in the top frame).
 - Engine rule and option wording comes from the engine build.
 
 ## Licences and credits
