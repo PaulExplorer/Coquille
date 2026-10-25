@@ -12,7 +12,7 @@ export default defineConfig({
     short_name: "Better Grammalecte",
     description: "In-place French spelling and grammar checking, powered by the Grammalecte engine.",
     version_name: undefined,
-    permissions: ["storage", "activeTab"],
+    permissions: ["storage"],
     host_permissions: ["<all_urls>"],
     icons: {
       16: "icons/icon-16.png",
