@@ -37,10 +37,29 @@ export function serveRequests(engineHost: EngineHostLike): (tabId: number) => vo
   const getSettings = (): Promise<BackgroundSettings> =>
     (settingsPromise ??= loadSettings());
 
+  /** Badge on the toolbar icon, uBlock-style: per-tab error count. */
+  const updateBadge = (tabId: number, count: number): void => {
+    const text = count <= 0 ? '' : count > 999 ? '999+' : String(count);
+    void Promise.resolve(browser.action.setBadgeText({ tabId, text })).catch(() => {});
+  };
+
   const onTabRemoved = (tabId: number): void => {
     lintCounts.delete(tabId);
   };
+
+  const onTabUpdated = (tabId: number, changeInfo: { url?: string }): void => {
+    if (changeInfo.url === undefined) return;
+    // Real navigation: the previous page's content script is gone, so the
+    // badge clears and re-appears once the new page reports its count.
+    lintCounts.delete(tabId);
+    updateBadge(tabId, 0);
+  };
+
   browser.tabs.onRemoved.addListener(onTabRemoved);
+  browser.tabs.onUpdated.addListener(onTabUpdated);
+  void Promise.resolve(
+    browser.action.setBadgeBackgroundColor({ color: '#c4302b' }),
+  ).catch(() => {});
 
   serveBackgroundRequests(async (request, sender) => {
     switch (request.type) {
@@ -144,7 +163,10 @@ export function serveRequests(engineHost: EngineHostLike): (tabId: number) => vo
       }
 
       case 'reportLintCount': {
-        if (sender.tabId != null) lintCounts.set(sender.tabId, request.count);
+        if (sender.tabId != null) {
+          lintCounts.set(sender.tabId, request.count);
+          updateBadge(sender.tabId, request.count);
+        }
         return lintCounts.get(sender.tabId ?? -1) ?? 0;
       }
 
