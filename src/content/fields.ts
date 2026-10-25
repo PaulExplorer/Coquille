@@ -214,8 +214,12 @@ function ensureMirrorArena(
     borderRightColor: 'transparent',
     borderBottomColor: 'transparent',
     borderLeftColor: 'transparent',
-    whiteSpace: field instanceof HTMLTextAreaElement ? 'pre-wrap' : 'pre',
-    wordWrap: 'break-word',
+    // Copy the field's computed wrapping for textareas — the browser already
+    // knows the right answer, including `white-space: pre` for wrap="off" and
+    // site-imposed `nowrap`. Inputs get `pre` because their computed value is
+    // `normal`, which would collapse runs of spaces and shift offsets.
+    whiteSpace: field instanceof HTMLTextAreaElement ? styles.whiteSpace : 'pre',
+    overflowWrap: field instanceof HTMLTextAreaElement ? styles.overflowWrap : 'normal',
     overflowX: 'auto',
     overflowY: 'auto',
     visibility: 'hidden',
@@ -247,17 +251,26 @@ function syncMirror(arena: MirrorArena, value: string, start: number, end: numbe
   const fieldBox = arena.field.getBoundingClientRect();
   const toPx = (value: string): number => Number.parseFloat(value) || 0;
   // For content-box fields the CSS width excludes padding and borders, which
-  // are part of the on-screen box; restore the layout width the field shows.
+  // are part of the on-screen box; restore the layout size the field shows.
+  // The constrained height also keeps the mirror from extending the page (a
+  // long unwrapped value would otherwise grow the body scroll area) and makes
+  // the scrollTop/scrollLeft sync above actually scroll.
   let width = fieldBox.width;
+  let height = fieldBox.height;
   if (styles.boxSizing !== 'border-box') {
     width =
       fieldBox.width -
       toPx(styles.paddingLeft) - toPx(styles.paddingRight) -
       toPx(styles.borderLeftWidth) - toPx(styles.borderRightWidth);
+    height =
+      fieldBox.height -
+      toPx(styles.paddingTop) - toPx(styles.paddingBottom) -
+      toPx(styles.borderTopWidth) - toPx(styles.borderBottomWidth);
   }
   arena.mirror.style.top = `${fieldBox.top + window.scrollY}px`;
   arena.mirror.style.left = `${fieldBox.left + window.scrollX}px`;
   arena.mirror.style.width = `${width}px`;
+  arena.mirror.style.height = `${height}px`;
 }
 
 function mirrorRects(
