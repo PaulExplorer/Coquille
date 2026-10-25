@@ -250,10 +250,23 @@ export class ContentSession {
   private applyReplacement(lint: LintDto, replacement: string): void {
     const adapter = this.adapter;
     if (adapter === undefined) return;
-    this.overlay.clearBoxes();
+    // Grammalecte-style optimistic update: its panel re-analyzes only the
+    // edited paragraph and keeps the other paragraphs' results on screen in
+    // the meantime. Mirror that here — drop the applied lint, shift the ones
+    // after it by the replacement length delta, and leave everything else
+    // clickable while the debounced re-analysis runs.
+    const delta = replacement.length - (lint.end - lint.start);
+    this.lints = this.lints.flatMap(other => {
+      if (other.end > lint.start && other.start < lint.end) return []; // overlapping
+      if (other.start >= lint.end) {
+        return [{ ...other, start: other.start + delta, end: other.end + delta }];
+      }
+      return [other];
+    });
+    this.renderBoxes();
     adapter.replace(lint, replacement);
-    // Replace events bubble to our own input listener, which schedules the
-    // next lint; nothing more to do here.
+    // The input event dispatched by replace() lands in our own listener,
+    // which schedules the next (authoritative) lint.
   }
 
   private ignoreLint(lint: LintDto): void {
