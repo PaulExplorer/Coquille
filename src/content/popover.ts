@@ -260,13 +260,20 @@ export class PopoverLayer {
   }
 
   private position(card: HTMLElement, rect: DOMRect): void {
-    card.style.left = `${Math.max(8, Math.round(rect.left))}px`;
+    // Measure while detached from the anchor row: the card is placed at 0/0
+    // behind visibility:hidden so its rendered size is known, then clamped
+    // inside the window on both axes before it is shown.
     card.style.visibility = 'hidden';
+    card.style.left = '0px';
+    card.style.top = '0px';
     this.mount.append(card);
     const box = card.getBoundingClientRect();
+    const margin = 8;
+    const maxLeft = Math.max(margin, window.innerWidth - box.width - margin);
+    card.style.left = `${Math.min(Math.max(margin, Math.round(rect.left)), maxLeft)}px`;
     const below = rect.bottom + 6;
-    const flip = below + box.height > window.innerHeight - 8;
-    card.style.top = flip ? `${Math.max(8, Math.round(rect.top - 6 - box.height))}px` : `${Math.round(below)}px`;
+    const flip = below + box.height > window.innerHeight - margin;
+    card.style.top = flip ? `${Math.max(margin, Math.round(rect.top - 6 - box.height))}px` : `${Math.round(below)}px`;
     card.style.visibility = '';
     card.remove();
   }
