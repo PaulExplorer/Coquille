@@ -220,9 +220,14 @@ export class ContentSession {
     const adapter = this.adapter;
     if (adapter === undefined || this.lints.length === 0) {
       this.overlay.clearBoxes();
+      if (adapter !== undefined) {
+        // Nothing to draw, but the circle still needs its dock — its anchor
+        // must follow the field even around here (scroll, resize, empty
+        // field), otherwise it falls back to the viewport's top-left.
+        this.overlay.setCircleAnchor(adapter.host.getBoundingClientRect());
+      }
       return;
     }
-    // Keep the circle docked to the field's corner as it scrolls.
     this.overlay.setCircleAnchor(adapter.host.getBoundingClientRect());
     const boxes: HitBox[] = [];
     const rangedSeen = new Set<string>();
