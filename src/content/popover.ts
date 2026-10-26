@@ -183,7 +183,7 @@ export class PopoverLayer {
     const card = document.createElement('div');
     card.className = 'bg-popover';
 
-    const kindLabel = lint.kind === 'spelling' ? 'Orthographe' : 'Grammaire';
+    const kindLabel = lint.kind === 'spelling' ? 'Orthographe' : lint.kind === 'style' ? 'Style et typographie' : 'Grammaire';
     const title = document.createElement('span');
     title.className = 'bg-popover__strength';
     title.textContent = kindLabel;

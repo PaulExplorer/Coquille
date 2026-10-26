@@ -39,11 +39,11 @@ export class ContentSession {
   private composing = false;
   private siteEnabled = true;
   private stopped = false;
-  private badgeTimer: number | undefined;
   private readonly cleanups: Array<() => void> = [];
 
   constructor() {
     this.overlay = new OverlayLayer();
+    this.overlay.setCircleClickHandler(() => this.openReviewPanel());
     this.popover = new PopoverLayer(this.overlay.shadow, {
       apply: (lint, replacement) => this.applyReplacement(lint, replacement),
       ignore: lint => this.ignoreLint(lint),
@@ -126,6 +126,8 @@ export class ContentSession {
     this.analyzedText = undefined;
     this.popover.close();
     this.overlay.clearBoxes();
+    this.overlay.hideCircle();
+    this.overlay.clearBoxes();
     this.lintToken += 1;
   }
 
@@ -163,14 +165,14 @@ export class ContentSession {
       this.lints = [];
       this.analyzedText = text;
       this.renderBoxes();
-      this.overlay.hideBadge();
+      this.overlay.setCircle(0);
       void callBackground({ type: 'reportLintCount', count: 0 }).catch(() => {});
       return;
     }
 
     const token = (this.lintToken += 1);
-    this.overlay.setBadgeAnchor(adapter.host.getBoundingClientRect());
-    this.overlay.showBadge('Analyse…');
+    this.overlay.setCircleAnchor(adapter.host.getBoundingClientRect());
+    this.overlay.setCircleBusy();
     try {
       const batch = await callBackground<{ lints: LintDto[]; truncated: boolean }>({
         type: 'lintText',
@@ -186,24 +188,13 @@ export class ContentSession {
       this.lints = batch.lints;
       this.analyzedText = text;
       this.renderBoxes();
-      this.announceCount(batch.lints.length);
+      this.overlay.setCircle(batch.lints.length);
       this.refreshPanelIfOpen();
       void callBackground({ type: 'reportLintCount', count: batch.lints.length }).catch(() => {});
     } catch (error) {
       console.debug('Better Grammalecte: lint request failed', error);
-      this.overlay.hideBadge();
+      this.overlay.restoreCircle();
     }
-  }
-
-  /** Brief status pill: count of the last completed analysis. */
-  private announceCount(count: number): void {
-    window.clearTimeout(this.badgeTimer);
-    if (count === 0) {
-      this.overlay.hideBadge();
-      return;
-    }
-    this.overlay.showBadge(`${count} remarque${count > 1 ? 's' : ''}`);
-    this.badgeTimer = window.setTimeout(() => this.overlay.hideBadge(), 1800);
   }
 
   /** Keep the review panel in sync while it is open. */
@@ -231,6 +222,8 @@ export class ContentSession {
       this.overlay.clearBoxes();
       return;
     }
+    // Keep the circle docked to the field's corner as it scrolls.
+    this.overlay.setCircleAnchor(adapter.host.getBoundingClientRect());
     const boxes: HitBox[] = [];
     const rangedSeen = new Set<string>();
     for (const lint of this.lints) {
@@ -285,8 +278,8 @@ export class ContentSession {
       // writing at the lints' offsets could hit the wrong words, so refuse
       // and let the fresh analysis re-anchor everything.
       this.popover.close();
-      this.overlay.setBadgeAnchor(adapter.host.getBoundingClientRect());
-      this.overlay.showBadge('Recalcul…');
+      this.overlay.setCircleAnchor(adapter.host.getBoundingClientRect());
+      this.overlay.setCircleBusy();
       this.scheduleLint();
       return;
     }
@@ -398,7 +391,6 @@ export class ContentSession {
     this.stopped = true;
     window.clearTimeout(this.debounceTimer);
     window.clearTimeout(this.blurTimer);
-    window.clearTimeout(this.badgeTimer);
     for (const cleanup of this.cleanups) cleanup();
     this.cleanups.length = 0;
     this.popover.close();

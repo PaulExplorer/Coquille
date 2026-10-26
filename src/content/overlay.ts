@@ -28,19 +28,39 @@ const STYLE = `
   background-position: bottom left;
 }
 .bg-box.grammar {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='M0 2.5 Q 1.5 0.5 3 2.5 T 6 2.5' stroke='%23d4a017' stroke-width='1' fill='none'/%3E%3C/svg%3E");
+  background-repeat: repeat-x;
+  background-position: bottom left;
+}
+.bg-box.style {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='6' height='3'%3E%3Cpath d='M0 2.5 Q 1.5 0.5 3 2.5 T 6 2.5' stroke='%231971c2' stroke-width='1' fill='none'/%3E%3C/svg%3E");
   background-repeat: repeat-x;
   background-position: bottom left;
 }
-.bg-badge {
+.bg-circle {
   position: fixed;
-  font: 11px/1.4 system-ui, -apple-system, 'Segoe UI', sans-serif;
-  color: #f8fafc;
-  background: rgba(31, 41, 51, 0.92);
-  padding: 3px 9px;
+  width: 30px;
+  height: 30px;
   border-radius: 99px;
-  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.25);
-  white-space: nowrap;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  font: bold 12px/1 system-ui, -apple-system, 'Segoe UI', sans-serif;
+  color: #ffffff;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  box-shadow: 0 1px 5px rgba(15, 23, 42, 0.3);
+  pointer-events: auto;
+  cursor: pointer;
+  user-select: none;
+}
+.bg-circle.check {
+  background: #2f9e44;
+}
+.bg-circle.count {
+  background: #e03131;
+}
+.bg-circle.busy {
+  background: #52606d;
 }
 `;
 
@@ -49,8 +69,12 @@ export class OverlayLayer {
   /** Retargeted event.target for any pointer event inside the shadow layer. */
   readonly host: HTMLElement;
   private boxLayer: HTMLDivElement;
-  private badge: HTMLDivElement;
-  private badgeAnchor: DOMRect | undefined;
+  private circle: HTMLDivElement;
+  private circleAnchor: DOMRect | undefined;
+  private circleCount = 0;
+  private circleBusyFlag = false;
+  private circleHidden = true;
+  private circleClickHandler: (() => void) | undefined;
   private currentBoxes: HitBox[];
 
   constructor() {
@@ -61,35 +85,80 @@ export class OverlayLayer {
     const style = document.createElement('style');
     style.textContent = STYLE;
     this.boxLayer = document.createElement('div');
-    this.badge = document.createElement('div');
-    this.badge.className = 'bg-badge';
-    this.badge.style.display = 'none';
-    this.shadow.append(style, this.boxLayer, this.badge);
+    this.circle = document.createElement('div');
+    this.circle.className = 'bg-circle';
+    this.circle.setAttribute('aria-hidden', 'false');
+    this.circle.title = 'Voir toutes les remarques';
+    this.circle.addEventListener('click', () => this.circleClickHandler?.());
+    this.shadow.append(style, this.boxLayer, this.circle);
     document.documentElement.append(host);
     this.currentBoxes = [];
   }
 
-  /** Anchor for badge positioning; call before showBadge. */
-  setBadgeAnchor(rect: DOMRect): void {
-    this.badgeAnchor = rect;
+  /** Wire the click on the summary circle (LanguageTool-style recap entry). */
+  setCircleClickHandler(handler: () => void): void {
+    this.circleClickHandler = handler;
   }
 
-  /** Show a status pill near the field's top-right corner. */
-  showBadge(text: string): void {
-    const anchor = this.badgeAnchor;
-    this.badge.textContent = text;
-    if (anchor !== undefined) {
-      this.badge.style.right = `${Math.max(12, Math.round(window.innerWidth - anchor.right))}px`;
-      this.badge.style.top = `${Math.max(8, Math.round(anchor.top - 26))}px`;
-    } else {
-      this.badge.style.right = '16px';
-      this.badge.style.top = '12px';
-    }
-    this.badge.style.display = 'block';
+  /** Anchor for the circle positioning; call before any circle update. */
+  setCircleAnchor(rect: DOMRect): void {
+    this.circleAnchor = rect;
+    this.applyCirclePosition();
   }
 
-  hideBadge(): void {
-    this.badge.style.display = 'none';
+  /** Recompute position from the last anchor (scroll, resize). */
+  private applyCirclePosition(): void {
+    const anchor = this.circleAnchor;
+    if (anchor === undefined) return;
+    this.circle.style.right = `${Math.max(12, Math.round(window.innerWidth - anchor.right))}px`;
+    const above = Math.round(anchor.top) - 30 - 6;
+    this.circle.style.top = `${above < 8 ? Math.round(anchor.top) + 6 : above}px`;
+  }
+
+  /** Count from the last completed analysis: green check or red number. */
+  setCircle(count: number): void {
+    this.circleCount = Math.max(0, count);
+    this.circleBusyFlag = false;
+    this.circleHidden = false;
+    this.applyCirclePosition();
+    this.renderCircle();
+  }
+
+  /** Transient spinner state while an analysis runs. */
+  setCircleBusy(): void {
+    this.circleBusyFlag = true;
+    this.circleHidden = false;
+    this.applyCirclePosition();
+    this.renderCircle();
+  }
+
+  /** A failed analysis falls back to the last known count. */
+  restoreCircle(): void {
+    this.circleBusyFlag = false;
+    this.renderCircle();
+  }
+
+  hideCircle(): void {
+    this.circleHidden = true;
+    this.renderCircle();
+  }
+
+  private renderCircle(): void {
+    this.circle.className = `bg-circle ${this.circleHidden
+      ? ''
+      : this.circleBusyFlag
+        ? 'busy'
+        : this.circleCount > 0
+          ? 'count'
+          : 'check'}`;
+    this.circle.style.display = this.circleHidden ? 'none' : 'flex';
+    this.circle.textContent = this.circleHidden
+      ? ''
+      : this.circleBusyFlag
+        ? '…'
+        : this.circleCount > 0
+          ? (this.circleCount > 99 ? '99+' : String(this.circleCount))
+          : '✓';
   }
 
   setBoxes(boxes: HitBox[]): void {

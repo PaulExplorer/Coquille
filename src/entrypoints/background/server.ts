@@ -218,7 +218,6 @@ function toDto(lint: RawLint): LintDto {
     ruleId: lint.ruleId,
     message: lint.message,
     url: lint.url,
-    color: lint.color,
     suggestions: lint.suggestions,
     value: lint.value,
   };

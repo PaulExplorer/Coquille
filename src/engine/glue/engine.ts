@@ -37,7 +37,25 @@ export interface EngineDataResolver {
   fetchJsonText(relativePath: string): Promise<string>;
 }
 
-export type LintKind = "grammar" | "spelling";
+export type LintKind = "spelling" | "grammar" | "style";
+
+/** Engine rule families (option names) that report style or typography
+ * issues; those render blue. Everything else (conjugaison, accords,
+ * confusions, rules without a family) renders yellow. */
+const TYPOGRAPHY_TYPES = new Set([
+  "typo", "apos", "mapos", "eepi", "esp", "tab", "nbsp", "tu", "maj", "minis",
+  "num", "virg", "poncfin", "unit", "nf", "liga", "chim",
+]);
+const STYLE_TYPES = new Set([
+  "bs", "pleo", "eleu", "neg", "redon1", "redon2", "date", "mc",
+]);
+
+export function grammarKind(sType: string): LintKind {
+  const kind: LintKind = TYPOGRAPHY_TYPES.has(sType) || STYLE_TYPES.has(sType)
+    ? "style"
+    : "grammar";
+  return kind;
+}
 
 /** Engine analysis result, with offsets expressed in the raw input text. */
 export interface RawLint {
@@ -48,12 +66,9 @@ export interface RawLint {
   ruleId: string;
   message: string;
   url: string | undefined;
-  /** Rule category color from the engine, if any. */
-  color: string | undefined;
-  /** Grammar: engine suggestions. Spelling: filled by spellingSuggestions. */
-  suggestions: string[];
   /** Underlined text. */
   value: string;
+  suggestions: string[];
 }
 
 export interface GrammalecteEngine {
@@ -183,11 +198,10 @@ function mapGrammarError(
   return {
     start: paragraph.start + localStart,
     end: paragraph.start + localEnd,
-    kind: "grammar",
+    kind: grammarKind(error.sType),
     ruleId: error.sRuleId,
     message: error.sMessage,
     url: error.URL === "" ? undefined : error.URL,
-    color: typeof error.aColor === "string" ? error.aColor : undefined,
     suggestions: error.aSuggestions,
     value,
   };
@@ -229,7 +243,6 @@ function mapSpellToken(
     ruleId: token.sValue,
     message: "",
     url: undefined,
-    color: undefined,
     suggestions: [],
     value,
   };

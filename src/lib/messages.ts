@@ -26,12 +26,10 @@ export interface LintDto {
   /** Offsets in the text sent for analysis. */
   start: number;
   end: number;
-  kind: 'grammar' | 'spelling';
+  kind: 'grammar' | 'spelling' | 'style';
   ruleId: string;
   message: string;
   url: string | undefined;
-  /** Category color hint from the engine, if any. */
-  color: string | undefined;
   suggestions: string[];
   value: string;
 }
