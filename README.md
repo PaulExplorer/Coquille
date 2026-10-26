@@ -27,7 +27,44 @@ pipeline.
 - Personal list of ignored words and rules.
 - Everything runs locally in the extension; no text is sent anywhere.
 
+## Screenshots
+
+![Underlines and suggestion popover](docs/screenshots/underlines.png)
+
+![Review panel](docs/screenshots/panel.png)
+
+## Installation
+
+No signed package is published yet; builds come from tagged GitHub releases
+(`coquille-firefox.zip`, `coquille-chrome.zip`).
+
+Chrome, Edge, Brave and other Chromium browsers:
+
+1. Download and unzip `coquille-chrome.zip`.
+2. Open `chrome://extensions`, enable **Developer mode** (top-right toggle).
+3. Click **Load unpacked** and select the unzipped folder.
+
+Firefox, temporary install (until you close Firefox, handy for a try):
+
+1. Download `coquille-firefox.zip` and rename it to `coquille.xpi`.
+2. Open `about:debugging`, click **This Firefox**, then **Load Temporary
+   Add-on** and pick the `.xpi` file.
+
+Firefox, permanent install without a store listing: unsigned extensions
+only load in Firefox Developer Edition or Nightly.
+
+1. Open `about:config`, set `xpinstall.signatures.required` to `false`.
+2. Open `about:addons`, cog icon, **Install Add-on From File...**, pick the
+   `.xpi`.
+
+Everyday Firefox installs get the signed package from
+[addons.mozilla.org](https://addons.mozilla.org/) once the listing is
+approved.
+
 ## Building
+
+See [BUILD.md](BUILD.md) for full details, privacy policy in
+[PRIVACY.md](PRIVACY.md).
 
 ```sh
 npm install
@@ -60,17 +97,17 @@ is never edited in this repository. To update it:
 
 ## Code map
 
-- `src/engine/grammalecte/` — vendored engine (verbatim files plus a
+- `src/engine/grammalecte/`: vendored engine (verbatim files plus a
   generated bundle and stub modules for upstream's CommonJS fallbacks, which
   are dead code in a browser).
-- `src/engine/glue/` — engine initialization replicating upstream's
+- `src/engine/glue/`: engine initialization replicating upstream's
   `gce_worker.js` steps (async data loading for MV3) and the raw-offset
   mapping between page text and the engine's normalized text.
-- `src/content/` — field detection, mirror-based measurement, underline
+- `src/content/`: field detection, mirror-based measurement, underline
   rendering in a shadow layer, suggestion popover and text replacement.
-- `src/entrypoints/` — background (engine host and request router), content
+- `src/entrypoints/`: background (engine host and request router), content
   script, popup, options page.
-- `src/lib/` — typed message contract, settings storage, site normalization.
+- `src/lib/`: typed message contract, settings storage, site normalization.
 
 ## Releases
 
