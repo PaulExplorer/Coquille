@@ -1,6 +1,6 @@
 import { defineConfig } from "wxt";
 
-const GECKO_ID = "better-grammalecte@pllx76.dev";
+const GECKO_ID = "coquille@pllx76.dev";
 
 export default defineConfig({
   srcDir: "src",
@@ -8,9 +8,9 @@ export default defineConfig({
   modules: ["@wxt-dev/module-react"],
   manifestVersion: 3,
   manifest: ({ browser }) => ({
-    name: "Better Grammalecte",
-    short_name: "Better Grammalecte",
-    description: "In-place French spelling and grammar checking, powered by the Grammalecte engine.",
+    name: "Coquille",
+    short_name: "Coquille",
+    description: "Correcteur d'orthographe et de grammaire en place, propulsé par le moteur Grammalecte.",
     version_name: undefined,
     permissions: ["storage"],
     host_permissions: ["<all_urls>"],
@@ -29,7 +29,7 @@ export default defineConfig({
         96: "icons/icon-96.png",
         128: "icons/icon-128.png",
       },
-      default_title: "Better Grammalecte",
+      default_title: "Coquille",
     },
     ...(browser === "firefox"
       ? {

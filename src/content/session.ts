@@ -192,7 +192,7 @@ export class ContentSession {
       this.refreshPanelIfOpen();
       void callBackground({ type: 'reportLintCount', count: batch.lints.length }).catch(() => {});
     } catch (error) {
-      console.debug('Better Grammalecte: lint request failed', error);
+      console.debug('Coquille: lint request failed', error);
       this.overlay.restoreCircle();
     }
   }

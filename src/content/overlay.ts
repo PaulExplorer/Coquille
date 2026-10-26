@@ -7,7 +7,7 @@
 import type { LintDto } from '../lib/messages';
 import type { HitBox } from './overlay-types';
 
-const OVERLAY_ID = 'better-grammalecte-overlay';
+const OVERLAY_ID = 'coquille-overlay';
 const OVERLAY_Z = 2147483646;
 
 const STYLE = `

@@ -1,7 +1,7 @@
 {
-  "name": "better-grammalecte",
-  "title": "Better Grammalecte",
-  "description": "In-place French spell and grammar checking powered by the Grammalecte engine.",
+  "name": "coquille",
+  "title": "Coquille",
+  "description": "Correcteur d'orthographe et de grammaire en place, propulsé par le moteur Grammalecte.",
   "version": "1.0.0",
   "license": "GPL-3.0-or-later",
   "private": true,

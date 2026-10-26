@@ -87,7 +87,7 @@ export function App() {
   return (
     <div className="popup">
       <header className="popup__head">
-        <h1>Better Grammalecte</h1>
+        <h1>Coquille</h1>
       </header>
 
       <label className="popup__row">

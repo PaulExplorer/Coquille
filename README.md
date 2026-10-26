@@ -1,9 +1,9 @@
-# Better Grammalecte
+# Coquille
 
 Firefox and Chrome extension providing in-place French spelling and grammar
 checking, powered by the [Grammalecte](https://grammalecte.net/) engine.
 
-- Repository: <https://github.com/PaulExplorer/BetterGrammalecte>
+- Repository: <https://github.com/PaulExplorer/Coquille>
 - Bug reports and suggestions: the repo's GitHub Issues
 
 The original Grammalecte web extension analyses the page text inside a side
@@ -15,8 +15,11 @@ pipeline.
 
 ## Features
 
-- Inline underlines (red for spelling, blue for grammar) in `textarea`,
-  single-line inputs and contenteditable hosts, following the focused field.
+- Inline underlines by category (red for spelling, yellow for grammar, blue
+  for style and typography) in `textarea`, single-line inputs and
+  contenteditable hosts, following the focused field.
+- Summary circle on the field: green check or red error count, opens the
+  review panel.
 - Suggestion popover on click: replace, ignore a word or a rule.
 - Per-site disable switch (popup or options), applied per domain and its
   subdomains.

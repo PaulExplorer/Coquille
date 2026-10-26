@@ -2,7 +2,7 @@ import { browser } from 'wxt/browser';
 import type { BackgroundSettings, EngineVersion } from './messages';
 import { getURLUnchecked } from './get-url';
 
-const SETTINGS_SCHEMA = 'better-grammalecte/settings';
+const SETTINGS_SCHEMA = 'coquille/settings';
 
 export const DEFAULT_SETTINGS: BackgroundSettings = {
   globalEnabled: true,

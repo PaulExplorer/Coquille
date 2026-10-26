@@ -39,7 +39,7 @@ export function App() {
   return (
     <div className="options">
       <header className="options__head">
-        <h1>Better Grammalecte</h1>
+        <h1>Coquille</h1>
         {version !== undefined ? (
           <span className="options__version">moteur Grammalecte {version.engineVersion}</span>
         ) : undefined}
