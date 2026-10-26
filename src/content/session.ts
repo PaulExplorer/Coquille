@@ -232,9 +232,17 @@ export class ContentSession {
       return;
     }
     const boxes: HitBox[] = [];
+    const rangedSeen = new Set<string>();
     for (const lint of this.lints) {
+      // The engine can flag the same span twice (a spelling miss and a rule
+      // over it); one underline is the honest rendering, further ones only
+      // double-paint the wavy line.
+      const rangeKey = `${lint.start}:${lint.end}`;
+      if (rangedSeen.has(rangeKey)) continue;
+      rangedSeen.add(rangeKey);
       const rects = adapter.rects(lint.start, lint.end);
       for (const rect of rects.slice(0, MAX_RECTS_PER_LINT)) {
+        if (!this.fieldVisibleAt(rect)) continue;
         boxes.push({
           // Thin underline strip for rendering; the full line box is kept for
           // pointer hit-testing (Harper hit-tests the whole box).
@@ -250,6 +258,21 @@ export class ContentSession {
       }
     }
     this.overlay.setBoxes(boxes);
+  }
+
+  /** A rect is drawable only where the field itself is topmost: custom caret
+   * layers, message bars and other page furniture regularly float above the
+   * field, and painting underlines over them looks broken. The overlay's own
+   * host is allowed because the popover legitimately floats above a box. */
+  private fieldVisibleAt(rect: DOMRect): boolean {
+    const top = document.elementFromPoint(
+      rect.left + rect.width / 2,
+      rect.top + rect.height / 2,
+    );
+    if (top === null) return true;
+    const host = this.adapter?.host;
+    if (host === undefined) return false;
+    return top === host || host.contains(top) || top === this.overlay.host;
   }
 
   /* ------------------------------ Actions ------------------------------ */

@@ -102,6 +102,10 @@ export class OverlayLayer {
   }
 
   hitAt(point: { x: number; y: number }): HitBox | undefined {
+    // Several lints can overlap one point (a long-range rule covering a short
+    // misspelled word, say). Prefer the most specific — smallest — hit box,
+    // otherwise a wide lint would swallow the clicks of the word inside it.
+    let best: HitBox | undefined;
     for (const box of this.currentBoxes) {
       const hit = box.hitRect;
       if (
@@ -110,10 +114,15 @@ export class OverlayLayer {
         point.y >= hit.top - 3 &&
         point.y <= hit.bottom + 3
       ) {
-        return box;
+        if (
+          best === undefined ||
+          hit.width * hit.height < best.hitRect.width * best.hitRect.height
+        ) {
+          best = box;
+        }
       }
     }
-    return undefined;
+    return best;
   }
 
   allBoxes(): HitBox[] {
