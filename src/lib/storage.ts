@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: BackgroundSettings = {
   engineOptions: {},
   ignoredWords: [],
   ignoredRules: [],
+  suppressNativeSpellcheck: true,
 };
 
 function sanitize(raw: unknown): BackgroundSettings {
@@ -29,6 +30,9 @@ function sanitize(raw: unknown): BackgroundSettings {
       : { ...DEFAULT_SETTINGS.engineOptions },
     ignoredWords: Array.isArray(candidate.ignoredWords) ? [...candidate.ignoredWords] : [],
     ignoredRules: Array.isArray(candidate.ignoredRules) ? [...candidate.ignoredRules] : [],
+    suppressNativeSpellcheck: typeof candidate.suppressNativeSpellcheck == 'boolean'
+      ? candidate.suppressNativeSpellcheck
+      : DEFAULT_SETTINGS.suppressNativeSpellcheck,
   };
 }
 

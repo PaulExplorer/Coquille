@@ -20,6 +20,8 @@ export interface BackgroundSettings {
   engineOptions: Record<string, boolean>;
   ignoredWords: string[];
   ignoredRules: string[];
+  /** Turn off the browser's own spellcheck on fields we analyze. */
+  suppressNativeSpellcheck: boolean;
 }
 
 export interface LintDto {

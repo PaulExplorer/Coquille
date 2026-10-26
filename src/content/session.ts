@@ -16,7 +16,7 @@ import { callBackground } from '../lib/messaging';
 import type { BackgroundSettings, LintDto } from '../lib/messages';
 import { domainFromUrl } from '../lib/sites';
 import { watchSettings } from '../lib/storage';
-import { asFieldAdapter, type FieldAdapter } from './fields';
+import { asFieldAdapter, setSuppressNativeSpellcheck, type FieldAdapter } from './fields';
 import { OverlayLayer } from './overlay';
 import type { HitBox } from './overlay-types';
 import { PopoverLayer } from './popover';
@@ -84,7 +84,11 @@ export class ContentSession {
     this.cleanups.push(
       watchSettings(settings => {
         this.settings = settings;
-        void this.evaluateSiteStatus();
+        void this.evaluateSiteStatus().then(() => {
+          // Covers live toggles (options page, popup) while a field is
+          // attached; no-op when evaluateSiteStatus just detached everything.
+          this.applySpellcheckPreference();
+        });
       }),
     );
   }
@@ -98,13 +102,26 @@ export class ContentSession {
     if (adapter === undefined) return;
     if (this.adapter?.host === adapter.host) return;
 
+    // Leaving field A for field B never goes through detachField; release
+    // A's native spellcheck now or it would stay suppressed forever.
+    if (this.adapter !== undefined) setSuppressNativeSpellcheck(this.adapter.host, false);
+
     this.adapter = adapter;
     this.lints = [];
     this.analyzedText = undefined;
     this.popover.close();
     const enabled = await this.evaluateSiteStatus();
     if (!enabled || this.adapter?.host !== adapter.host) return;
+    this.applySpellcheckPreference();
     void this.lintNow();
+  }
+
+  /** Apply the native-spellcheck preference to the attached field. */
+  private applySpellcheckPreference(): void {
+    const adapter = this.adapter;
+    if (adapter === undefined) return;
+    const suppress = this.siteEnabled && (this.settings?.suppressNativeSpellcheck ?? true);
+    setSuppressNativeSpellcheck(adapter.host, suppress);
   }
 
   /** Drop the active field when focus moved somewhere else. */
@@ -121,6 +138,8 @@ export class ContentSession {
   }
 
   private detachField(): void {
+    const adapter = this.adapter;
+    if (adapter !== undefined) setSuppressNativeSpellcheck(adapter.host, false);
     this.adapter = undefined;
     this.lints = [];
     this.analyzedText = undefined;

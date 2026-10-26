@@ -92,6 +92,14 @@ function GeneralTab(props: {
         />
       </label>
       <label className="row">
+        <span>Désactiver le correcteur du navigateur sur les champs analysés</span>
+        <input
+          type="checkbox"
+          checked={settings.suppressNativeSpellcheck}
+          onChange={event => void patch({ suppressNativeSpellcheck: event.target.checked })}
+        />
+      </label>
+      <label className="row">
         <span>Délai d'analyse après la frappe (ms)</span>
         <input
           type="number"

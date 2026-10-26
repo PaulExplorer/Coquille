@@ -137,6 +137,32 @@ export class ContentEditableAdapter implements FieldAdapter {
   }
 }
 
+/* --------------------------- Native spellcheck --------------------------- */
+
+/**
+ * Reversible native spellcheck suppression: when Coquille analyses a field,
+ * the browser's own red squiggles only duplicate our underlines. The host's
+ * original `spellcheck` state is remembered and put back on release, so
+ * disabling the extension per site (or globally) restores exactly what the
+ * page had.
+ */
+const nativeSpellcheckStates = new WeakMap<Element, string | null>();
+
+export function setSuppressNativeSpellcheck(host: Element, suppress: boolean): void {
+  if (suppress) {
+    if (!nativeSpellcheckStates.has(host)) {
+      nativeSpellcheckStates.set(host, host.getAttribute('spellcheck'));
+    }
+    host.setAttribute('spellcheck', 'false');
+  } else {
+    const previous = nativeSpellcheckStates.get(host);
+    if (previous === undefined) return;
+    if (previous === null) host.removeAttribute('spellcheck');
+    else host.setAttribute('spellcheck', previous);
+    nativeSpellcheckStates.delete(host);
+  }
+}
+
 /* -------------------------------- Mirror -------------------------------- */
 
 /**
