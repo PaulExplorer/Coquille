@@ -362,14 +362,14 @@ function AboutTab(props: {
           <a href="https://grammalecte.net/" target="_blank" rel="noreferrer">
             Grammalecte
           </a>{' '}
-          — © Olivier R., licence GPL-3.0-or-later.
+          (© Olivier R.), licence GPL-3.0-or-later.
         </li>
         <li>
           Approche du rendu inline (mesure miroir, boîtes, popover) inspirée de{' '}
           <a href="https://github.com/Automattic/harper" target="_blank" rel="noreferrer">
             Harper
           </a>{' '}
-          — Automattic, Apache-2.0.
+          (Automattic, Apache-2.0).
         </li>
       </ul>
       <p className="hint">

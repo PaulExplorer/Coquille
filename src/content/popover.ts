@@ -417,7 +417,7 @@ export class PopoverLayer {
       const check = document.createElement('div');
       check.className = 'bg-panel__check';
       check.textContent = '✓';
-      empty.append(check, document.createTextNode(`Le texte est correct — ${fieldLabel}`));
+      empty.append(check, document.createTextNode(`Le texte est correct (${fieldLabel})`));
       card.append(empty);
     }
 
