@@ -1,6 +1,8 @@
 import { defineConfig } from "wxt";
 
-const GECKO_ID = "coquille@pllx76.dev";
+// Add-on identifier (figé à vie sur AMO). Unique, stable, and anchored to
+// the project's GitHub namespace: github.com/PaulExplorer/Coquille
+const GECKO_ID = "coquille@paulexplorer";
 
 export default defineConfig({
   srcDir: "src",
