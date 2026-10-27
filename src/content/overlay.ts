@@ -106,13 +106,24 @@ export class OverlayLayer {
     this.applyCirclePosition();
   }
 
-  /** Recompute position from the last anchor (scroll, resize). */
+  /** Recompute position from the last anchor (scroll, resize).
+   *
+   * The dock sits above the field, but a long field scrolled deep into its
+   * content pushes its top edge out of the viewport; a raw anchor would put
+   * the circle at a negative top and out of sight. The dock is clamped into
+   * the visible area instead, so the summary stays reachable while reading
+   * the lower part of the text. */
   private applyCirclePosition(): void {
     const anchor = this.circleAnchor;
     if (anchor === undefined) return;
     this.circle.style.right = `${Math.max(12, Math.round(window.innerWidth - anchor.right))}px`;
-    const above = Math.round(anchor.top) - 30 - 6;
-    this.circle.style.top = `${above < 8 ? Math.round(anchor.top) + 6 : above}px`;
+    const fieldTop = Math.round(anchor.top);
+    const above = fieldTop - 30 - 6;
+    const top =
+      above >= 8
+        ? Math.min(above, Math.round(window.innerHeight) - 40)
+        : Math.max(fieldTop, 0) + 6;
+    this.circle.style.top = `${Math.max(6, top)}px`;
   }
 
   /** Count from the last completed analysis: green check or red number. */
