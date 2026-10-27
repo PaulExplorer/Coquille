@@ -22,6 +22,10 @@ import type { HitBox } from './overlay-types';
 import { PopoverLayer } from './popover';
 
 const DEFAULT_DEBOUNCE = 300;
+/* A keystroke stream resets the trailing debounce forever; this cap bounds
+ * how long unchanged-text lints can stay on screen: analysis fires within
+ * this delay of the first pending change. */
+const DEBOUNCE_CAP = 1000;
 const MAX_RECTS_PER_LINT = 8;
 
 export class ContentSession {
@@ -35,6 +39,7 @@ export class ContentSession {
   private settings: BackgroundSettings | undefined;
   private lintToken = 0;
   private debounceTimer: number | undefined;
+  private debounceCapTimer: number | undefined;
   private blurTimer: number | undefined;
   private composing = false;
   private siteEnabled = true;
@@ -69,7 +74,10 @@ export class ContentSession {
     };
     add<FocusEvent>(document, 'focusin', event => this.attachField(event.target));
     add(document, 'focusout', () => this.considerBlur());
-    add(document, 'input', () => this.scheduleLint());
+    add(document, 'input', () => {
+      this.realignUnderlines();
+      this.scheduleLint();
+    });
     add(document, 'compositionstart', () => {
       this.composing = true;
     });
@@ -173,10 +181,26 @@ export class ContentSession {
     if (this.adapter === undefined || !this.siteEnabled) return;
     window.clearTimeout(this.debounceTimer);
     const delay = this.composing ? 800 : (this.settings?.debounceMs ?? DEFAULT_DEBOUNCE);
-    this.debounceTimer = window.setTimeout(() => void this.lintNow(), delay);
+    this.debounceTimer = window.setTimeout(() => {
+      window.clearTimeout(this.debounceCapTimer);
+      this.debounceCapTimer = undefined;
+      void this.lintNow();
+    }, delay);
+    // Starvation guard: continuous typing resets the trailing timer above
+    // forever, so stale underlines would persist until the first pause. The
+    // cap timer fires once, capped after the first pending change.
+    if (this.debounceCapTimer === undefined) {
+      this.debounceCapTimer = window.setTimeout(() => {
+        window.clearTimeout(this.debounceTimer);
+        this.debounceTimer = undefined;
+        void this.lintNow();
+      }, DEBOUNCE_CAP);
+    }
   }
 
   private async lintNow(): Promise<void> {
+    window.clearTimeout(this.debounceCapTimer);
+    this.debounceCapTimer = undefined;
     const adapter = this.adapter;
     if (adapter === undefined || !this.siteEnabled) return;
     const text = adapter.text();
@@ -234,6 +258,50 @@ export class ContentSession {
   }
 
   /* ------------------------------ Rendering ---------------------------- */
+
+  /**
+   * Keeping underlines honest between analyses: any contiguous insertion or
+   * deletion only shifts offsets past the change, so the untouched lints are
+   * remapped live and stay on screen (with fresh geometry) while the
+   * debounced re-analysis catches up. Anything less predictable (several
+   * edits at once, IME churn, whole-value rewrites) cannot be remapped, and
+   * the underlines hide rather than point at words they no longer describe.
+   */
+  private realignUnderlines(): void {
+    const adapter = this.adapter;
+    if (adapter === undefined || this.analyzedText === undefined || !this.siteEnabled) return;
+    const previous = this.analyzedText;
+    const current = adapter.text();
+    if (previous === current) return;
+    const before = commonPrefixLength(previous, current);
+    const after = commonSuffixLength(previous, current, before);
+    const removed = previous.length - before - after;
+    const inserted = current.length - before - after;
+    // One contiguous edit, exactly one of the two.
+    if (removed !== 0 && inserted !== 0) {
+      // Unremappable: drop the geometry, the capped re-analysis re-anchors
+      // everything shortly.
+      this.overlay.clearBoxes();
+      this.overlay.setCircleBusy();
+      return;
+    }
+    // End of the changed region, in previous-text coordinates.
+    const editEnd = before + removed;
+    const delta = current.length - previous.length;
+    const remapped: LintDto[] = [];
+    for (const lint of this.lints) {
+      if (lint.end <= before) remapped.push(lint);
+      else if (lint.start >= editEnd) {
+        remapped.push({ ...lint, start: lint.start + delta, end: lint.end + delta });
+      }
+      // Otherwise the change cuts the flagged text; fresh lints will land
+      // with the re-analysis.
+    }
+    this.lints = remapped;
+    this.analyzedText = current;
+    this.renderBoxes();
+    this.refreshPanelIfOpen();
+  }
 
   private renderBoxes(): void {
     const adapter = this.adapter;
@@ -414,6 +482,7 @@ export class ContentSession {
   destroy(): void {
     this.stopped = true;
     window.clearTimeout(this.debounceTimer);
+    window.clearTimeout(this.debounceCapTimer);
     window.clearTimeout(this.blurTimer);
     for (const cleanup of this.cleanups) cleanup();
     this.cleanups.length = 0;
@@ -421,4 +490,21 @@ export class ContentSession {
     this.overlay.clearBoxes();
     this.detachField();
   }
+}
+
+/** Common prefix length of two strings, computed character by character
+ * (analysis snapshots are at most tens of kilobytes). */
+function commonPrefixLength(a: string, b: string): number {
+  const max = Math.min(a.length, b.length);
+  let i = 0;
+  while (i < max && a[i] === b[i]) i += 1;
+  return i;
+}
+
+/** Common suffix length of two strings, ignoring the common prefix. */
+function commonSuffixLength(a: string, b: string, from: number): number {
+  const max = Math.min(a.length, b.length) - from;
+  let n = 0;
+  while (n < max && a[a.length - 1 - n] === b[b.length - 1 - n]) n += 1;
+  return n;
 }
