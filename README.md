@@ -124,8 +124,9 @@ GitHub Actions build both targets on every push and attach the Firefox zip
   the extension will stay that way.
 - Rich editors are covered through the contenteditable path; exotic editors
   (Google Docs canvas) are not supported.
-- Fields inside cross-origin iframes are not reached (the content script
-  only injects in the top frame).
+- Text fields inside iframes are reached too (the content script runs in
+  every frame); the popup badge and the review panel reflect the focused
+  frame's session.
 - Engine rule and option wording comes from the engine build.
 
 ## Licences and credits

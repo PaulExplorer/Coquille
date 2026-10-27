@@ -11,6 +11,11 @@ import { ContentSession } from '../../content/session';
 export default defineContentScript({
   matches: ['<all_urls>'],
   runAt: 'document_idle',
+  // Reach text fields inside iframes (embeddable editors, Sandpack-style
+  // playgrounds, forum composers): each frame runs the same lazy,
+  // focus-driven session, so the cost is a handful of listeners per frame
+  // until a field has the focus.
+  allFrames: true,
   main(ctx) {
     const session = new ContentSession();
     session.attachActiveField();
