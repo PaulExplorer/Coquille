@@ -17,7 +17,7 @@ import type {
   TabStatus,
 } from '../../lib/messages';
 import { serveBackgroundRequests } from '../../lib/messaging';
-import { loadEngineVersion, loadSettings, saveSettings } from '../../lib/storage';
+import { loadEngineVersion, loadSettings, saveSettings as persistSettings } from '../../lib/storage';
 import { optionCatalog } from './option-catalog';
 
 export interface EngineHostLike {
@@ -36,6 +36,14 @@ export function serveRequests(engineHost: EngineHostLike): (tabId: number) => vo
 
   const getSettings = (): Promise<BackgroundSettings> =>
     (settingsPromise ??= loadSettings());
+
+  /** Every write must let the cache agree with storage, or the next read
+   * within this worker's lifetime would resurrect the previous state (the
+   * Chrome service worker idling out hides it, not reliably). */
+  const saveSettings = (next: BackgroundSettings): Promise<void> =>
+    persistSettings(next).then(() => {
+      settingsPromise = Promise.resolve(next);
+    });
 
   /** Badge on the toolbar icon, uBlock-style: per-tab error count. */
   const updateBadge = (tabId: number, count: number): void => {
