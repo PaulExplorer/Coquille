@@ -160,6 +160,19 @@ export function setSuppressNativeSpellcheck(host: Element, suppress: boolean): v
 }
 
 /**
+ * Attribute value resolution, HTML spec plus legacy synonyms: only
+ * "true", "" and "false" exist in the spec (other values fall back to the
+ * inherited/built-in default), but sites regularly spell their intent as
+ * "on"/"off" and that intent deserves the same weight; anything unparseable
+ * leaves the resolution to the ancestor chain.
+ */
+function spellcheckDeclaration(value: string | null): boolean | undefined {
+  if (value === 'true' || value === '' || value === 'on') return true;
+  if (value === 'false' || value === 'off') return false;
+  return undefined;
+}
+
+/**
  * The page's own spellcheck decision for this host, exactly as it was before
  * any interference from us — mandatory here because our suppression rewrites
  * the attribute to "false" and would otherwise read back our own change and
@@ -171,7 +184,8 @@ export function setSuppressNativeSpellcheck(host: Element, suppress: boolean): v
 export function pageSpellcheckState(host: HTMLElement): boolean {
   const remembered = nativeSpellcheckStates.get(host);
   if (remembered !== undefined && remembered !== null) {
-    return remembered === 'true' || remembered === '';
+    const declared = spellcheckDeclaration(remembered);
+    if (declared !== undefined) return declared;
   }
   // The snapshot only covers the host's own attribute; when the host had
   // none (absent in the snapshot), an ancestor may still declare one, and
@@ -181,8 +195,8 @@ export function pageSpellcheckState(host: HTMLElement): boolean {
     element !== null;
     element = element.parentElement
   ) {
-    const value = element.getAttribute('spellcheck');
-    if (value !== null) return value === 'true' || value === '';
+    const declared = spellcheckDeclaration(element.getAttribute('spellcheck'));
+    if (declared !== undefined) return declared;
   }
   // No declaration anywhere: prose holders default to checked (and Coquille
   // corrects single-line inputs by design anyway).
