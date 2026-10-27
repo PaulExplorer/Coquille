@@ -58,6 +58,20 @@ export class ContentSession {
     });
     this.wireListeners();
     void this.evaluateSiteStatus();
+    // Settings otherwise only arrive through change events; the very first
+    // attach decisions (forced correction, debounce) need the real initial
+    // values, so fetch them once. The re-evaluation also repairs an attach
+    // decision that raced ahead of this answer.
+    void callBackground<BackgroundSettings>({ type: 'getSettings' })
+      .then(settings => {
+        this.settings = settings;
+        if (this.adapter !== undefined) {
+          if (!this.correctionAllowedFor(this.adapter)) this.detachField();
+          return;
+        }
+        void this.attachField(document.activeElement);
+      })
+      .catch(() => {});
   }
 
   /* ------------------------------- Wiring ------------------------------ */
