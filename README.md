@@ -20,6 +20,9 @@ pipeline.
   contenteditable hosts, following the focused field.
 - Summary circle on the field: green check or red error count, opens the
   review panel.
+- Optional suppression of the browser's own spellcheck on analyzed fields,
+  so the red squiggles of the browser and the underlines of Coquille do not
+  pile up (on by default, settings page).
 - Suggestion popover on click: replace, ignore a word or a rule.
 - Per-site disable switch (popup or options), applied per domain and its
   subdomains.
