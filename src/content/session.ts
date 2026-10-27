@@ -16,7 +16,7 @@ import { callBackground } from '../lib/messaging';
 import type { BackgroundSettings, LintDto } from '../lib/messages';
 import { domainFromUrl } from '../lib/sites';
 import { watchSettings } from '../lib/storage';
-import { asFieldAdapter, setSuppressNativeSpellcheck, type FieldAdapter } from './fields';
+import { asFieldAdapter, pageSpellcheckState, setSuppressNativeSpellcheck, type FieldAdapter } from './fields';
 import { OverlayLayer } from './overlay';
 import type { HitBox } from './overlay-types';
 import { PopoverLayer } from './popover';
@@ -93,9 +93,16 @@ export class ContentSession {
       watchSettings(settings => {
         this.settings = settings;
         void this.evaluateSiteStatus().then(() => {
-          // Covers live toggles (options page, popup) while a field is
-          // attached; no-op when evaluateSiteStatus just detached everything.
+          if (this.adapter === undefined) {
+            // A newly-allowed correction (override enabled, site re-enabled)
+            // picks the focused field back up.
+            void this.attachField(document.activeElement);
+            return;
+          }
+          // Covers live toggles while a field is attached: state first, then
+          // the page's spellcheck intent may have become blocking.
           this.applySpellcheckPreference();
+          if (!this.correctionAllowedFor(this.adapter)) this.detachField();
         });
       }),
     );
@@ -120,8 +127,22 @@ export class ContentSession {
     this.popover.close();
     const enabled = await this.evaluateSiteStatus();
     if (!enabled || this.adapter?.host !== adapter.host) return;
+    // Honor the page's own spellcheck declaration (unless the user chose to
+    // correct anyway). Judged from the original state, before our native
+    // suppression writes spellcheck="false" onto the field.
+    if (!this.correctionAllowedFor(adapter)) {
+      this.detachField();
+      return;
+    }
     this.applySpellcheckPreference();
     void this.lintNow();
+  }
+
+  /** May Coquille analyze this field, given the page's spellcheck intent? */
+  private correctionAllowedFor(adapter: FieldAdapter): boolean {
+    const host = adapter.host;
+    if (!(host instanceof HTMLElement)) return true;
+    return (this.settings?.forceSpellcheck ?? false) || pageSpellcheckState(host);
   }
 
   /** Apply the native-spellcheck preference to the attached field. */

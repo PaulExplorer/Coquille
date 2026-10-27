@@ -159,6 +159,36 @@ export function setSuppressNativeSpellcheck(host: Element, suppress: boolean): v
   }
 }
 
+/**
+ * The page's own spellcheck decision for this host, exactly as it was before
+ * any interference from us — mandatory here because our suppression rewrites
+ * the attribute to "false" and would otherwise read back our own change and
+ * neutralize the correction. The resolution mirrors the browser: the nearest
+ * spellcheck attribute on the host or an ancestor wins; without any, prose
+ * holders (textarea, contenteditable) default to on and single-line inputs
+ * to off.
+ */
+export function pageSpellcheckState(host: HTMLElement): boolean {
+  const remembered = nativeSpellcheckStates.get(host);
+  if (remembered !== undefined && remembered !== null) {
+    return remembered === 'true' || remembered === '';
+  }
+  // The snapshot only covers the host's own attribute; when the host had
+  // none (absent in the snapshot), an ancestor may still declare one, and
+  // the ancestors' subtree is untouched by our writes.
+  for (
+    let element: Element | null = remembered !== undefined ? host.parentElement : host;
+    element !== null;
+    element = element.parentElement
+  ) {
+    const value = element.getAttribute('spellcheck');
+    if (value !== null) return value === 'true' || value === '';
+  }
+  // No declaration anywhere: prose holders default to checked (and Coquille
+  // corrects single-line inputs by design anyway).
+  return true;
+}
+
 /* -------------------------------- Mirror -------------------------------- */
 
 /**

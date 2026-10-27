@@ -22,6 +22,8 @@ export interface BackgroundSettings {
   ignoredRules: string[];
   /** Turn off the browser's own spellcheck on fields we analyze. */
   suppressNativeSpellcheck: boolean;
+  /** Correct fields even where the site itself turned spellcheck off. */
+  forceSpellcheck: boolean;
 }
 
 export interface LintDto {

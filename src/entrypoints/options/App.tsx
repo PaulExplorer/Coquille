@@ -100,6 +100,14 @@ function GeneralTab(props: {
         />
       </label>
       <label className="row">
+        <span>Corriger même quand le site a désactivé le correcteur (spellcheck)</span>
+        <input
+          type="checkbox"
+          checked={settings.forceSpellcheck}
+          onChange={event => void patch({ forceSpellcheck: event.target.checked })}
+        />
+      </label>
+      <label className="row">
         <span>Délai d'analyse après la frappe (ms)</span>
         <input
           type="number"

@@ -13,6 +13,7 @@ export const DEFAULT_SETTINGS: BackgroundSettings = {
   ignoredWords: [],
   ignoredRules: [],
   suppressNativeSpellcheck: true,
+  forceSpellcheck: false,
 };
 
 function sanitize(raw: unknown): BackgroundSettings {
@@ -33,6 +34,9 @@ function sanitize(raw: unknown): BackgroundSettings {
     suppressNativeSpellcheck: typeof candidate.suppressNativeSpellcheck == 'boolean'
       ? candidate.suppressNativeSpellcheck
       : DEFAULT_SETTINGS.suppressNativeSpellcheck,
+    forceSpellcheck: typeof candidate.forceSpellcheck == 'boolean'
+      ? candidate.forceSpellcheck
+      : DEFAULT_SETTINGS.forceSpellcheck,
   };
 }
 
