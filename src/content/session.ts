@@ -44,6 +44,11 @@ export class ContentSession {
   private composing = false;
   private siteEnabled = true;
   private stopped = false;
+  /** The most recent field considered for attach, including one that was
+   * skipped: a live settings change re-runs that decision on it directly,
+   * because the browser action popup steals the page's focus and leaves
+   * document.activeElement pointing at <body>. */
+  private lastConsidered: Element | undefined;
   private readonly cleanups: Array<() => void> = [];
 
   constructor() {
@@ -108,9 +113,13 @@ export class ContentSession {
         this.settings = settings;
         void this.evaluateSiteStatus().then(() => {
           if (this.adapter === undefined) {
-            // A newly-allowed correction (override enabled, site re-enabled)
-            // picks the focused field back up.
-            void this.attachField(document.activeElement);
+            // Re-run the attach decision on the last field considered (a
+            // skipped field usually): the popup just stole the page focus,
+            // so document.activeElement is useless here.
+            const host = this.lastConsidered;
+            if (host !== undefined && host.isConnected && asFieldAdapter(host) !== undefined) {
+              void this.attachField(host);
+            }
             return;
           }
           // Covers live toggles while a field is attached: state first, then
@@ -136,6 +145,7 @@ export class ContentSession {
     if (this.adapter !== undefined) setSuppressNativeSpellcheck(this.adapter.host, false);
 
     this.adapter = adapter;
+    this.lastConsidered = adapter.host;
     this.lints = [];
     this.analyzedText = undefined;
     this.popover.close();
