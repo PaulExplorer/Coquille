@@ -173,29 +173,45 @@ function spellcheckDeclaration(value: string | null): boolean | undefined {
 }
 
 /**
- * The page's own spellcheck decision for this host, exactly as it was before
+ * The page's own correction decision for this host, exactly as it was before
  * any interference from us — mandatory here because our suppression rewrites
- * the attribute to "false" and would otherwise read back our own change and
- * neutralize the correction. The resolution mirrors the browser: the nearest
- * spellcheck attribute on the host or an ancestor wins; without any, prose
- * holders (textarea, contenteditable) default to on and single-line inputs
- * to off.
+ * the spellcheck attribute to "false" and would otherwise read back our own
+ * change and neutralize the correction. The resolution mirrors the browser:
+ * the nearest spellcheck declaration on the host or an ancestor wins, with
+ * the legacy autocorrect attribute read alongside it (sites frequently pair
+ * the two); without any declaration, prose holders (textarea,
+ * contenteditable) default to on and single-line inputs to off.
  */
 export function pageSpellcheckState(host: HTMLElement): boolean {
+  // The host's own spellcheck attribute may have been rewritten by our
+  // suppression (spellcheck="false"); consult the remembered snapshot first.
   const remembered = nativeSpellcheckStates.get(host);
-  if (remembered !== undefined && remembered !== null) {
-    const declared = spellcheckDeclaration(remembered);
+  if (remembered !== undefined) {
+    if (remembered !== null) {
+      const declared = spellcheckDeclaration(remembered);
+      if (declared !== undefined) return declared;
+    }
+  } else {
+    const declared = spellcheckDeclaration(host.getAttribute('spellcheck'));
     if (declared !== undefined) return declared;
   }
-  // The snapshot only covers the host's own attribute; when the host had
-  // none (absent in the snapshot), an ancestor may still declare one, and
-  // the ancestors' subtree is untouched by our writes.
+  // Legacy autocorrect (old WebKit, paired with spellcheck on many sites)
+  // is never written by us, so it is read directly. autocapitalize is left
+  // out on purpose: it is about capitalization, not checking.
+  const autocorrect = spellcheckDeclaration(host.getAttribute('autocorrect'));
+  if (autocorrect !== undefined) return autocorrect;
+  // The snapshot only covers the host's own spellcheck attribute; when the
+  // host had none (absent in the snapshot), an ancestor may still declare
+  // one, and the ancestors' subtree is untouched by our writes.
   for (
-    let element: Element | null = remembered !== undefined ? host.parentElement : host;
+    let element: Element | null = host.parentElement;
     element !== null;
     element = element.parentElement
   ) {
-    const declared = spellcheckDeclaration(element.getAttribute('spellcheck'));
+    let declared = spellcheckDeclaration(element.getAttribute('spellcheck'));
+    if (declared === undefined) {
+      declared = spellcheckDeclaration(element.getAttribute('autocorrect'));
+    }
     if (declared !== undefined) return declared;
   }
   // No declaration anywhere: prose holders default to checked (and Coquille
