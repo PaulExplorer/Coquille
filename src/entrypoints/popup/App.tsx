@@ -62,6 +62,15 @@ export function App() {
     await refreshSite();
   }
 
+  async function toggleForce(): Promise<void> {
+    const next = (settings as BackgroundSettings).forceSpellcheck !== true;
+    const updated = await callBackground<BackgroundSettings>({
+      type: 'setSettings',
+      patch: { forceSpellcheck: next },
+    });
+    setSettings(updated);
+  }
+
   async function refreshSite(): Promise<void> {
     setSite(
       await callBackground<SiteStatus>({
@@ -102,6 +111,19 @@ export function App() {
           disabled={!isOnPage || settings.globalEnabled !== true}
           checked={site.effectiveEnabled}
           onChange={() => void toggleSite()}
+        />
+      </label>
+
+      <label
+        className="popup__row"
+        title={`Coquille se retire des champs que le site a marqués spellcheck="off" ; cocher pour corriger quand même.`}
+      >
+        <span>Forcer la correction</span>
+        <input
+          type="checkbox"
+          disabled={settings.globalEnabled !== true}
+          checked={settings.forceSpellcheck === true}
+          onChange={() => void toggleForce()}
         />
       </label>
 
