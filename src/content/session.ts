@@ -110,28 +110,41 @@ export class ContentSession {
     add(window, 'resize', () => this.renderBoxes());
     this.cleanups.push(
       watchSettings(settings => {
-        this.settings = settings;
-        void this.evaluateSiteStatus().then(() => {
-          if (this.adapter === undefined) {
-            // Re-run the attach decision on the last field considered (a
-            // skipped field usually): the popup just stole the page focus,
-            // so document.activeElement is useless here.
-            const host = this.lastConsidered;
-            if (host !== undefined && host.isConnected && asFieldAdapter(host) !== undefined) {
-              void this.attachField(host);
-            }
-            return;
-          }
-          // Covers live toggles while a field is attached: state first, then
-          // the page's spellcheck intent may have become blocking.
-          this.applySpellcheckPreference();
-          if (!this.correctionAllowedFor(this.adapter)) this.detachField();
-        });
+        this.handleSettingsUpdate(settings);
       }),
     );
   }
 
-  /* -------------------------------- Field ------------------------------ */
+  /* ------------------------------- Field ------------------------------ */
+
+  /** Live settings update, from the storage watcher or the background's
+   * direct push. Re-evaluates the current topology in one place. */
+  handleSettingsUpdate(settings: BackgroundSettings): void {
+    this.settings = settings;
+    // TEMP-DIAG: removed once the live-toggle path is verified.
+    console.debug(
+      'Coquille[diag]: settings change, force =', settings.forceSpellcheck,
+      'attached =', this.adapter !== undefined,
+    );
+    void this.evaluateSiteStatus().then(() => {
+      if (this.adapter === undefined) {
+        // Re-run the attach decision on the last field considered (a
+        // skipped field usually): the popup just stole the page focus, so
+        // document.activeElement is useless here.
+        const host = this.lastConsidered;
+        // TEMP-DIAG
+        console.debug('Coquille[diag]: settings re-attach candidate =', host?.tagName);
+        if (host !== undefined && host.isConnected && asFieldAdapter(host) !== undefined) {
+          void this.attachField(host);
+        }
+        return;
+      }
+      // Covers live toggles while a field is attached: state first, then
+      // the page's spellcheck intent may have become blocking.
+      this.applySpellcheckPreference();
+      if (!this.correctionAllowedFor(this.adapter)) this.detachField();
+    });
+  }
 
   /** Attach or switch the active field; re-checks the per-site status. */
   private async attachField(target: EventTarget | null): Promise<void> {
@@ -155,9 +168,13 @@ export class ContentSession {
     // correct anyway). Judged from the original state, before our native
     // suppression writes spellcheck="false" onto the field.
     if (!this.correctionAllowedFor(adapter)) {
+      // TEMP-DIAG
+      console.debug('Coquille[diag]: field skipped (page intent)', adapter.host.tagName);
       this.detachField();
       return;
     }
+    // TEMP-DIAG
+    console.debug('Coquille[diag]: attach allowed, linting', adapter.host.tagName);
     this.applySpellcheckPreference();
     void this.lintNow();
   }
@@ -506,6 +523,8 @@ export class ContentSession {
       // decision on the focused field, no-op when nothing is focused.
       if (this.siteEnabled && !this.stopped) {
         const active = document.activeElement;
+        // TEMP-DIAG
+        console.debug('Coquille[diag]: pointerdown re-eval on', active?.nodeName);
         if (active !== null) void this.attachField(active);
       }
       return;

@@ -7,6 +7,7 @@
 import { defineContentScript } from 'wxt/utils/define-content-script';
 import { browser } from 'wxt/browser';
 import { ContentSession } from '../../content/session';
+import type { BackgroundSettings } from '../../lib/messages';
 
 export default defineContentScript({
   matches: ['<all_urls>'],
@@ -26,7 +27,18 @@ export default defineContentScript({
       _sender: unknown,
       respond: (response: { ok: boolean }) => void,
     ): boolean | undefined => {
-      const message = raw as { type?: string } | null;
+      const message = raw as { type?: string; settings?: BackgroundSettings } | null;
+      if (message?.type === 'settingsChanged') {
+        if (message.settings !== undefined) {
+          // TEMP-DIAG: removed once the live-toggle path is verified.
+          console.debug(
+            'Coquille[diag]: direct push, force =', message.settings.forceSpellcheck,
+          );
+          session.handleSettingsUpdate(message.settings);
+        }
+        respond({ ok: true });
+        return false;
+      }
       if (message?.type !== 'openReviewPanel') return undefined;
       session.openReviewPanel();
       respond({ ok: true });

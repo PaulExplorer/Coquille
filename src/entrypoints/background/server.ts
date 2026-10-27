@@ -39,11 +39,29 @@ export function serveRequests(engineHost: EngineHostLike): (tabId: number) => vo
 
   /** Every write must let the cache agree with storage, or the next read
    * within this worker's lifetime would resurrect the previous state (the
-   * Chrome service worker idling out hides it, not reliably). */
+   * Chrome service worker idling out hides it, not reliably). The fresh
+   * state is also fanned out to every content script directly: the
+   * storage.onChanged channel in the content script delivered stale values
+   * in practice, so the writer drives the change itself. */
   const saveSettings = (next: BackgroundSettings): Promise<void> =>
-    persistSettings(next).then(() => {
-      settingsPromise = Promise.resolve(next);
-    });
+    persistSettings(next)
+      .then(() => {
+        settingsPromise = Promise.resolve(next);
+        return browser.tabs
+          .query({})
+          .then(tabs =>
+            Promise.allSettled(
+              tabs
+                .filter(tab => tab.id !== undefined)
+                .map(tab =>
+                  browser.tabs
+                    .sendMessage(tab.id as number, { type: 'settingsChanged', settings: next })
+                    .catch(() => {}),
+                ),
+            ),
+          )
+          .then(() => {});
+      });
 
   /** Badge on the toolbar icon, uBlock-style: per-tab error count. */
   const updateBadge = (tabId: number, count: number): void => {

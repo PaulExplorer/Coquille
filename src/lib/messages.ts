@@ -71,6 +71,17 @@ export interface BackgroundResponse<T> {
   error?: string;
 }
 
+/**
+ * Pushed by the background after any settings save, background-to-content:
+ * the storage.onChanged channel proved unreliable across browser contexts
+ * (a freshly written value could reach the content script stale), so the
+ * writer fans the new state out explicitly itself.
+ */
+export interface SettingsChanged {
+  type: 'settingsChanged';
+  settings: BackgroundSettings;
+}
+
 /** Option catalog built from the engine's own getOptionLabels. */
 export interface EngineOptionInfo {
   name: string;
