@@ -24,14 +24,10 @@ export interface FieldAdapter {
   replace(lint: { start: number; end: number }, replacement: string): void;
 }
 
-const TEXT_INPUT_TYPES = new Set<HTMLInputElement['type']>([
-  'text',
-  'search',
-  'email',
-  'url',
-  'tel',
-  'number',
-]);
+// Only fields that carry normal prose. Identity-style inputs (email, url,
+// tel, number) are corrected by nothing: grammar and style rules have no
+// meaning there and likely only produce noise.
+const TEXT_INPUT_TYPES = new Set<HTMLInputElement['type']>(['text', 'search']);
 
 export function asFieldAdapter(candidate: EventTarget | null): FieldAdapter | undefined {
   if (!(candidate instanceof Element)) return undefined;
