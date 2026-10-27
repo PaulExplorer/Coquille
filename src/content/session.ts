@@ -489,7 +489,17 @@ export class ContentSession {
     // and a stray blur would detach the field and clear the overlays.
     if (event.target === this.overlay.host) this.focusField();
     const adapter = this.adapter;
-    if (adapter === undefined || !this.siteEnabled) return;
+    if (adapter === undefined || !this.siteEnabled) {
+      // A skipped field keeps the focus, so focusin never refires and a
+      // later forced-correction (or site re-enable) needs another trigger:
+      // pressing inside the field is the natural one. Re-run the attach
+      // decision on the focused field, no-op when nothing is focused.
+      if (this.siteEnabled && !this.stopped) {
+        const active = document.activeElement;
+        if (active !== null) void this.attachField(active);
+      }
+      return;
+    }
     // Only react to presses that actually landed on the field (Harper checks
     // the composed path contains the source element).
     if (!event.composedPath().includes(adapter.host)) return;
