@@ -95,6 +95,40 @@ def fail(message: str) -> None:
     raise SystemExit(f"error: {message}")
 
 
+# Engine files whose build output ends with a top-level "Initialization"
+# block meant for classic WebExtension background pages (conj, mfsp, phonet,
+# thesaurus). Those blocks load JSON through a synchronous XHR at bundle
+# evaluation time, which cannot work in MV3 (no XMLHttpRequest in a Chrome
+# service worker, sync XHR blocked for extension URLs in a Firefox event
+# page) and only produced console errors on startup. The extension glue
+# performs equivalent initialization with pre-fetched data, based on
+# createGCEEngine in src/engine/glue/engine.ts.
+ENGINE_FILES_WITH_AUTO_INIT = {
+    "fr/conj.js",
+    "fr/mfsp.js",
+    "fr/phonet.js",
+    "fr/thesaurus.js",
+}
+
+AUTO_INIT_PATTERN = re.compile(
+    # From the "// Initialization" comment to the final column-0 "}" closing
+    # the if/else chain; the chains only contain indented code.
+    r"^// Initialization\nif ?\(?!?\w+\.bInit.*?^}$\n?",
+    re.MULTILINE | re.DOTALL,
+)
+
+
+def strip_auto_init(file_text: str, relative_path: str) -> str:
+    """Remove the dead top-level initialization chain from one engine file."""
+    stripped_text, count = AUTO_INIT_PATTERN.subn("", file_text)
+    if count != 1:
+        fail(f"expected exactly one auto-init block in {relative_path}, matched {count}")
+    leftover = re.search(r"typeof\((browser|chrome)\) ?", stripped_text)
+    if leftover is not None:
+        fail(f"WebExtension runtime branches still present in {relative_path}")
+    return stripped_text
+
+
 def run_make(grammalecte_dir: pathlib.Path) -> None:
     if not (grammalecte_dir / "make.py").exists():
         fail(f"not a Grammalecte source tree (no make.py found in {grammalecte_dir})")
@@ -150,7 +184,10 @@ def copy_engine_files(
         destination = js_dest / relative
         destination.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(source, destination)
-        bundle_parts.append(f"// --- engine file: {relative} ---\n{source.read_text(encoding='utf-8')}")
+        file_text = source.read_text(encoding="utf-8")
+        if relative in ENGINE_FILES_WITH_AUTO_INIT:
+            file_text = strip_auto_init(file_text, relative)
+        bundle_parts.append(f"// --- engine file: {relative} ---\n{file_text}")
 
     exports = ", ".join(EXPORTED_SYMBOLS)
     bundle = (

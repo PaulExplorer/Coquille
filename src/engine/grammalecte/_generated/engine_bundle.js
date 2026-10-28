@@ -3858,21 +3858,6 @@ class Verb {
 }
 
 
-// Initialization
-if(!conj.bInit && typeof(process) !== 'undefined') {
-    // NodeJS
-    conj.init(helpers.loadFile(__dirname+"/conj_data.json"));
-} else if (!conj.bInit && typeof(browser) !== 'undefined') {
-    // WebExtension Standard (but not in Worker)
-    conj.init(helpers.loadFile(browser.runtime.getURL("grammalecte/fr/conj_data.json")));
-} else if (!conj.bInit && typeof(chrome) !== 'undefined') {
-    // WebExtension Chrome (but not in Worker)
-    conj.init(helpers.loadFile(chrome.runtime.getURL("grammalecte/fr/conj_data.json")));
-} else if (conj.bInit){
-    console.log("Module conj déjà initialisé");
-} else {
-    //console.log("Module conj non initialisé");
-}
 
 
 if (typeof(exports) !== 'undefined') {
@@ -4010,18 +3995,6 @@ var mfsp = {
 };
 
 
-// Initialization
-if (!mfsp.bInit && typeof(process) !== 'undefined') {
-    // NodeJS
-    mfsp.init(helpers.loadFile(__dirname+"/mfsp_data.json"));
-} else if (!mfsp.bInit && typeof(browser) !== 'undefined') {
-    // WebExtension
-    mfsp.init(helpers.loadFile(browser.runtime.getURL("grammalecte/fr/mfsp_data.json")));
-} else if (mfsp.bInit){
-    console.log("Module mfsp déjà initialisé");
-} else {
-    //console.log("Module mfsp non initialisé");
-}
 
 
 if (typeof(exports) !== 'undefined') {
@@ -4156,18 +4129,6 @@ var phonet = {
 };
 
 
-// Initialization
-if (!phonet.bInit && typeof(process) !== 'undefined') {
-    // NodeJS
-    phonet.init(helpers.loadFile(__dirname+"/phonet_data.json"));
-} else if (!phonet.bInit && typeof(browser) !== 'undefined') {
-    // WebExtension
-    phonet.init(helpers.loadFile(browser.runtime.getURL("grammalecte/fr/phonet_data.json")));
-} else if (phonet.bInit){
-    console.log("Module phonet déjà initialisé");
-} else {
-    //console.log("Module phonet non initialisé");
-}
 
 
 if (typeof(exports) !== 'undefined') {
@@ -4300,21 +4261,6 @@ var thesaurus = {
 
 
 
-// Initialization
-if (!thesaurus.bInit && typeof(process) !== 'undefined') {
-    // NodeJS
-    thesaurus.init(helpers.loadFile(__dirname+"/thesaurus1_data.json"), helpers.loadFile(__dirname+"/thesaurus2_data.json"));
-} else if (!thesaurus.bInit && typeof(browser) !== 'undefined') {
-    // WebExtension Standard (but not in Worker)
-    thesaurus.init(helpers.loadFile(browser.runtime.getURL("grammalecte/fr/thesaurus1_data.json")), helpers.loadFile(browser.runtime.getURL("grammalecte/fr/thesaurus2_data.json")));
-} else if (!thesaurus.bInit && typeof(chrome) !== 'undefined') {
-    // WebExtension Chrome (but not in Worker)
-    thesaurus.init(helpers.loadFile(chrome.runtime.getURL("grammalecte/fr/thesaurus1_data.json")), helpers.loadFile(chrome.runtime.getURL("grammalecte/fr/thesaurus2_data.json")));
-} else if (thesaurus.bInit){
-    console.log("Module thesaurus déjà initialisé");
-} else {
-    //console.log("Module thesaurus non initialisé");
-}
 
 
 if (typeof(exports) !== 'undefined') {
