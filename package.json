@@ -2,7 +2,7 @@
   "name": "coquille",
   "title": "Coquille",
   "description": "Correcteur d'orthographe et de grammaire en place, propulsé par le moteur Grammalecte.",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "license": "GPL-3.0-or-later",
   "private": true,
   "type": "module",
