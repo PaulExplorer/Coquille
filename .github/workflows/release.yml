@@ -19,6 +19,17 @@ jobs:
         with:
           node-version: 22
           cache: npm
+      - name: Check that the tag matches package.json
+        # The tag drives the release name and the zips must carry the same
+        # version in their manifest, so the two sources must agree.
+        run: |
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          TAG_VERSION=${GITHUB_REF_NAME#v}
+          if [ "$TAG_VERSION" != "$PKG_VERSION" ]; then
+            echo "tag $GITHUB_REF_NAME but package.json says $PKG_VERSION" >&2
+            echo "bump package.json first, or point a corrected tag at this commit" >&2
+            exit 1
+          fi
       - run: npm ci
       - run: npm run lint
       - run: npm test
